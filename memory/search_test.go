@@ -5,6 +5,154 @@ import (
 	"testing"
 )
 
+func TestVectorSearch(t *testing.T) {
+	dir := t.TempDir()
+	mdb, err := Open(filepath.Join(dir, "memory.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mdb.Close()
+
+	// Insert 3 chunks with known embeddings.
+	chunks := []struct {
+		id    string
+		text  string
+		embed []float32
+	}{
+		{"c1", "closest to query", []float32{0.9, 0.1, 0}},
+		{"c2", "orthogonal to query", []float32{0, 0, 1}},
+		{"c3", "somewhat similar", []float32{0.7, 0.3, 0.1}},
+	}
+
+	for _, c := range chunks {
+		emb := SerializeEmbedding(c.embed)
+		if err := mdb.InsertChunk(c.id, "conversation", "src-1", "test", 0, c.text, emb); err != nil {
+			t.Fatalf("InsertChunk(%s): %v", c.id, err)
+		}
+	}
+
+	queryVec := []float32{1, 0, 0}
+	results, err := mdb.SearchVector(queryVec, "", 10)
+	if err != nil {
+		t.Fatalf("SearchVector: %v", err)
+	}
+	if len(results) != 3 {
+		t.Fatalf("expected 3 results, got %d", len(results))
+	}
+
+	// c1 should be first (most similar to [1,0,0]).
+	if results[0].ChunkID != "c1" {
+		t.Errorf("expected first result c1, got %s", results[0].ChunkID)
+	}
+	// c2 should be last (orthogonal).
+	if results[2].ChunkID != "c2" {
+		t.Errorf("expected last result c2, got %s", results[2].ChunkID)
+	}
+
+	for _, r := range results {
+		t.Logf("  chunk=%s score=%.4f", r.ChunkID, r.Score)
+	}
+}
+
+func TestVectorSearchNoEmbeddings(t *testing.T) {
+	dir := t.TempDir()
+	mdb, err := Open(filepath.Join(dir, "memory.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mdb.Close()
+
+	// Insert chunk without embedding.
+	if err := mdb.InsertChunk("c1", "conversation", "src-1", "test", 0, "no embedding here", nil); err != nil {
+		t.Fatal(err)
+	}
+
+	results, err := mdb.SearchVector([]float32{1, 0, 0}, "", 10)
+	if err != nil {
+		t.Fatalf("SearchVector: %v", err)
+	}
+	if len(results) != 0 {
+		t.Fatalf("expected 0 results, got %d", len(results))
+	}
+}
+
+func TestHybridSearch(t *testing.T) {
+	dir := t.TempDir()
+	mdb, err := Open(filepath.Join(dir, "memory.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mdb.Close()
+
+	// c1: FTS match + medium vector similarity.
+	emb1 := SerializeEmbedding([]float32{0.5, 0.5, 0})
+	if err := mdb.InsertChunk("c1", "conversation", "src-1", "test", 0,
+		"authentication with JWT tokens", emb1); err != nil {
+		t.Fatal(err)
+	}
+
+	// c2: no FTS match + strong vector similarity.
+	emb2 := SerializeEmbedding([]float32{0.95, 0.05, 0})
+	if err := mdb.InsertChunk("c2", "conversation", "src-1", "test", 1,
+		"unrelated content about databases", emb2); err != nil {
+		t.Fatal(err)
+	}
+
+	// c3: FTS match + medium vector similarity.
+	emb3 := SerializeEmbedding([]float32{0.4, 0.6, 0})
+	if err := mdb.InsertChunk("c3", "conversation", "src-1", "test", 2,
+		"authentication middleware layer", emb3); err != nil {
+		t.Fatal(err)
+	}
+
+	queryVec := []float32{1, 0, 0}
+	results, err := mdb.HybridSearch("authentication", queryVec, "", 10)
+	if err != nil {
+		t.Fatalf("HybridSearch: %v", err)
+	}
+
+	// Both c1 and c2 should appear in results.
+	found := make(map[string]bool)
+	for _, r := range results {
+		found[r.ChunkID] = true
+		t.Logf("  chunk=%s score=%.4f", r.ChunkID, r.Score)
+	}
+	if !found["c1"] {
+		t.Error("expected c1 in hybrid results")
+	}
+	if !found["c2"] {
+		t.Error("expected c2 in hybrid results (strong vector similarity)")
+	}
+}
+
+func TestHybridSearchFTSOnly(t *testing.T) {
+	dir := t.TempDir()
+	mdb, err := Open(filepath.Join(dir, "memory.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mdb.Close()
+
+	// Insert chunk without embedding.
+	if err := mdb.InsertChunk("c1", "conversation", "src-1", "test", 0,
+		"authentication with JWT tokens for the API", nil); err != nil {
+		t.Fatal(err)
+	}
+
+	// Search with nil queryVec — should fall back to FTS only.
+	results, err := mdb.HybridSearch("authentication", nil, "", 10)
+	if err != nil {
+		t.Fatalf("HybridSearch FTS-only: %v", err)
+	}
+	if len(results) == 0 {
+		t.Fatal("expected at least 1 FTS-only result, got 0")
+	}
+	if results[0].ChunkID != "c1" {
+		t.Errorf("expected c1, got %s", results[0].ChunkID)
+	}
+	t.Logf("FTS-only results: %d", len(results))
+}
+
 func TestFTS(t *testing.T) {
 	dir := t.TempDir()
 	mdb, err := Open(filepath.Join(dir, "memory.db"))
