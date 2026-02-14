@@ -139,9 +139,7 @@ func (l *Loop) Go(ctx context.Context) error {
 		hasQueuedMessages := len(l.messageQueue) > 0
 		if hasQueuedMessages {
 			// Add queued messages to history (they are already recorded to DB by ConversationManager)
-			for _, msg := range l.messageQueue {
-				l.history = append(l.history, msg)
-			}
+			l.history = append(l.history, l.messageQueue...)
 			l.messageQueue = l.messageQueue[:0] // Clear queue
 		}
 		l.mu.Unlock()
@@ -178,9 +176,7 @@ func (l *Loop) ProcessOneTurn(ctx context.Context) error {
 	l.mu.Lock()
 	if len(l.messageQueue) > 0 {
 		// Add queued messages to history (they are already recorded to DB by ConversationManager)
-		for _, msg := range l.messageQueue {
-			l.history = append(l.history, msg)
-		}
+		l.history = append(l.history, l.messageQueue...)
 		l.messageQueue = nil
 	}
 	l.mu.Unlock()
@@ -484,9 +480,7 @@ func (l *Loop) handleToolCalls(ctx context.Context, content []llm.Content) error
 		// Check for queued user messages (interruptions) before continuing.
 		// This allows user messages to be processed as soon as possible.
 		if len(l.messageQueue) > 0 {
-			for _, msg := range l.messageQueue {
-				l.history = append(l.history, msg)
-			}
+			l.history = append(l.history, l.messageQueue...)
 			l.messageQueue = l.messageQueue[:0]
 			l.logger.Info("processing user interruption during tool execution")
 		}

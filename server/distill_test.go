@@ -28,7 +28,10 @@ func TestDistillConversation(t *testing.T) {
 		SourceConversationID: sourceConvID,
 		Model:                "predictable",
 	}
-	body, _ := json.Marshal(reqBody)
+	body, err := json.Marshal(reqBody)
+	if err != nil {
+		t.Fatalf("json.Marshal: %v", err)
+	}
 	req := httptest.NewRequest("POST", "/api/conversations/distill", strings.NewReader(string(body)))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
@@ -141,7 +144,10 @@ func TestDistillConversationMissingSource(t *testing.T) {
 		SourceConversationID: "nonexistent-id",
 		Model:                "predictable",
 	}
-	body, _ := json.Marshal(reqBody)
+	body, err := json.Marshal(reqBody)
+	if err != nil {
+		t.Fatalf("json.Marshal: %v", err)
+	}
 	req := httptest.NewRequest("POST", "/api/conversations/distill", strings.NewReader(string(body)))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
@@ -160,7 +166,10 @@ func TestDistillConversationEmptySource(t *testing.T) {
 	reqBody := ContinueConversationRequest{
 		SourceConversationID: "",
 	}
-	body, _ := json.Marshal(reqBody)
+	body, err := json.Marshal(reqBody)
+	if err != nil {
+		t.Fatalf("json.Marshal: %v", err)
+	}
 	req := httptest.NewRequest("POST", "/api/conversations/distill", strings.NewReader(string(body)))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
@@ -180,7 +189,10 @@ func TestBuildDistillTranscript(t *testing.T) {
 	}
 
 	makeMsg := func(typ string, llmMsg llm.Message) generated.Message {
-		data, _ := json.Marshal(llmMsg)
+		data, err := json.Marshal(llmMsg)
+		if err != nil {
+			t.Fatalf("failed to marshal llm message: %v", err)
+		}
 		s := string(data)
 		return generated.Message{Type: typ, LlmData: &s}
 	}
@@ -330,7 +342,10 @@ func TestDistillContentSentToLLM(t *testing.T) {
 		SourceConversationID: sourceConvID,
 		Model:                "predictable",
 	}
-	body, _ := json.Marshal(reqBody)
+	body, err := json.Marshal(reqBody)
+	if err != nil {
+		t.Fatalf("json.Marshal: %v", err)
+	}
 	req := httptest.NewRequest("POST", "/api/conversations/distill", strings.NewReader(string(body)))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
@@ -450,7 +465,10 @@ func TestDistillContentSentToLLM_WithEarlySSE(t *testing.T) {
 		SourceConversationID: sourceConvID,
 		Model:                "predictable",
 	}
-	body, _ := json.Marshal(reqBody)
+	body, err := json.Marshal(reqBody)
+	if err != nil {
+		t.Fatalf("json.Marshal: %v", err)
+	}
 	req := httptest.NewRequest("POST", "/api/conversations/distill", strings.NewReader(string(body)))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()

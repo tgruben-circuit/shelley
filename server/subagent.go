@@ -361,7 +361,7 @@ var _ claudetool.SubagentRunner = (*SubagentRunner)(nil)
 // handleGetSubagents returns the list of subagents for a conversation.
 func (s *Server) handleGetSubagents(w http.ResponseWriter, r *http.Request, conversationID string) {
 	if r.Method != "GET" {
-		http.Error(w, "Method not allowed", 405)
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -373,5 +373,5 @@ func (s *Server) handleGetSubagents(w http.ResponseWriter, r *http.Request, conv
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(subagents)
+	_ = json.NewEncoder(w).Encode(subagents) //nolint:errchkjson // best-effort HTTP response
 }

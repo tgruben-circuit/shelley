@@ -20,7 +20,10 @@ func TestContextWindowSizeCalculation(t *testing.T) {
 			CacheReadInputTokens:     200,
 			OutputTokens:             30,
 		}
-		usageJSON, _ := json.Marshal(usage)
+		usageJSON, err := json.Marshal(usage)
+		if err != nil {
+			t.Fatalf("json.Marshal: %v", err)
+		}
 		usageStr := string(usageJSON)
 
 		messages := []APIMessage{
@@ -45,7 +48,10 @@ func TestContextWindowSizeCalculation(t *testing.T) {
 			InputTokens:  150,
 			OutputTokens: 50,
 		}
-		usageJSON, _ := json.Marshal(usage)
+		usageJSON, err := json.Marshal(usage)
+		if err != nil {
+			t.Fatalf("json.Marshal: %v", err)
+		}
 		usageStr := string(usageJSON)
 
 		messages := []APIMessage{
@@ -70,7 +76,10 @@ func TestContextWindowSizeCalculation(t *testing.T) {
 			InputTokens:  100,
 			OutputTokens: 50,
 		}
-		usage1JSON, _ := json.Marshal(usage1)
+		usage1JSON, err := json.Marshal(usage1)
+		if err != nil {
+			t.Fatalf("json.Marshal: %v", err)
+		}
 		usage1Str := string(usage1JSON)
 
 		usage2 := llm.Usage{
@@ -78,7 +87,10 @@ func TestContextWindowSizeCalculation(t *testing.T) {
 			CacheReadInputTokens: 100,
 			OutputTokens:         75,
 		}
-		usage2JSON, _ := json.Marshal(usage2)
+		usage2JSON, err := json.Marshal(usage2)
+		if err != nil {
+			t.Fatalf("json.Marshal: %v", err)
+		}
 		usage2Str := string(usage2JSON)
 
 		messages := []APIMessage{
@@ -122,11 +134,17 @@ func TestContextWindowSizeCalculation(t *testing.T) {
 			InputTokens:  200,
 			OutputTokens: 50,
 		}
-		validUsageJSON, _ := json.Marshal(validUsage)
+		validUsageJSON, err := json.Marshal(validUsage)
+		if err != nil {
+			t.Fatalf("json.Marshal: %v", err)
+		}
 		validUsageStr := string(validUsageJSON)
 
 		zeroUsage := llm.Usage{} // All zeros
-		zeroUsageJSON, _ := json.Marshal(zeroUsage)
+		zeroUsageJSON, err := json.Marshal(zeroUsage)
+		if err != nil {
+			t.Fatalf("json.Marshal: %v", err)
+		}
 		zeroUsageStr := string(zeroUsageJSON)
 
 		messages := []APIMessage{

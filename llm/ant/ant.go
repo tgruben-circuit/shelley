@@ -530,16 +530,16 @@ func (s *Service) Do(ctx context.Context, ir *llm.Request) (*llm.Response, error
 
 		switch {
 		case resp.StatusCode == http.StatusOK:
-			var response response
-			err = json.NewDecoder(bytes.NewReader(buf)).Decode(&response)
+			var apiResp response
+			err = json.NewDecoder(bytes.NewReader(buf)).Decode(&apiResp)
 			if err != nil {
 				return nil, errors.Join(errs, err)
 			}
 			// Calculate and set the cost_usd field
-			response.Usage.CostUSD = llm.CostUSDFromResponse(resp.Header)
+			apiResp.Usage.CostUSD = llm.CostUSDFromResponse(resp.Header)
 
 			endTime := time.Now()
-			result := toLLMResponse(&response)
+			result := toLLMResponse(&apiResp)
 			result.StartTime = &startTime
 			result.EndTime = &endTime
 			return result, nil

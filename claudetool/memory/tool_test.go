@@ -38,7 +38,10 @@ func TestMemorySearchTool(t *testing.T) {
 	}
 
 	tool := NewMemorySearchTool(db, nil)
-	input, _ := json.Marshal(searchInput{Query: "authentication"})
+	input, err := json.Marshal(searchInput{Query: "authentication"})
+	if err != nil {
+		t.Fatalf("Failed to marshal input: %v", err)
+	}
 	result := tool.Run(context.Background(), input)
 
 	if result.Error != nil {
@@ -59,7 +62,10 @@ func TestMemorySearchTool(t *testing.T) {
 
 func TestMemorySearchToolNoDatabase(t *testing.T) {
 	tool := NewMemorySearchTool(nil, nil)
-	input, _ := json.Marshal(searchInput{Query: "anything"})
+	input, err := json.Marshal(searchInput{Query: "anything"})
+	if err != nil {
+		t.Fatalf("Failed to marshal input: %v", err)
+	}
 	result := tool.Run(context.Background(), input)
 
 	if result.Error != nil {
@@ -83,7 +89,10 @@ func TestMemorySearchToolEmptyResults(t *testing.T) {
 	defer db.Close()
 
 	tool := NewMemorySearchTool(db, nil)
-	input, _ := json.Marshal(searchInput{Query: "nonexistent"})
+	input, err := json.Marshal(searchInput{Query: "nonexistent"})
+	if err != nil {
+		t.Fatalf("Failed to marshal input: %v", err)
+	}
 	result := tool.Run(context.Background(), input)
 
 	if result.Error != nil {

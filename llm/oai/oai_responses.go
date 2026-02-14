@@ -264,7 +264,7 @@ func (s *ResponsesService) toLLMResponseFromResponses(resp *responsesResponse, h
 
 	// Process the output items
 	var contents []llm.Content
-	var stopReason llm.StopReason = llm.StopReasonStopSequence
+	var stopReason = llm.StopReasonStopSequence
 
 	for _, item := range resp.Output {
 		switch item.Type {
@@ -381,7 +381,7 @@ func (s *ResponsesService) Do(ctx context.Context, ir *llm.Request) (*llm.Respon
 	}
 
 	// Convert tools
-	var tools []responsesTool
+	tools := make([]responsesTool, 0, len(ir.Tools))
 	for _, t := range ir.Tools {
 		tools = append(tools, fromLLMToolResponses(t))
 	}

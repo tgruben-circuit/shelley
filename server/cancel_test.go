@@ -78,7 +78,10 @@ func TestCancelWithPredictableModel(t *testing.T) {
 		Message: "bash: sleep 5",
 		Model:   "predictable",
 	}
-	chatBody, _ := json.Marshal(chatReq)
+	chatBody, err := json.Marshal(chatReq)
+	if err != nil {
+		t.Fatalf("json.Marshal: %v", err)
+	}
 
 	req := httptest.NewRequest("POST", "/api/conversation/"+conversationID+"/chat", strings.NewReader(string(chatBody)))
 	req.Header.Set("Content-Type", "application/json")
@@ -209,7 +212,10 @@ func TestCancelWithPredictableModel(t *testing.T) {
 		Message: "echo: test after cancel",
 		Model:   "predictable",
 	}
-	resumeBody, _ := json.Marshal(resumeReq)
+	resumeBody, err := json.Marshal(resumeReq)
+	if err != nil {
+		t.Fatalf("json.Marshal: %v", err)
+	}
 
 	resumeChatReq := httptest.NewRequest("POST", "/api/conversation/"+conversationID+"/chat", strings.NewReader(string(resumeBody)))
 	resumeChatReq.Header.Set("Content-Type", "application/json")
@@ -328,7 +334,10 @@ func TestCancelDuringTextGeneration(t *testing.T) {
 		Message: "delay: 2",
 		Model:   "predictable",
 	}
-	chatBody, _ := json.Marshal(chatReq)
+	chatBody, err := json.Marshal(chatReq)
+	if err != nil {
+		t.Fatalf("json.Marshal: %v", err)
+	}
 
 	req := httptest.NewRequest("POST", "/api/conversation/"+conversationID+"/chat", strings.NewReader(string(chatBody)))
 	req.Header.Set("Content-Type", "application/json")

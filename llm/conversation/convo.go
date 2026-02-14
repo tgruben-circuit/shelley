@@ -300,7 +300,7 @@ func (c *Convo) insertMissingToolResults(mr *llm.Request, msg *llm.Message) {
 }
 
 // SendMessage sends a message to Claude.
-// The conversation records (internally) all messages succesfully sent and received.
+// The conversation records (internally) all messages successfully sent and received.
 func (c *Convo) SendMessage(msg llm.Message) (*llm.Response, error) {
 	id := ulid.Make().String()
 	mr := c.messageRequest(msg)
@@ -410,7 +410,7 @@ func (c *Convo) newToolUseContext(ctx context.Context, toolUseID string) (contex
 	defer c.toolUseCancelMu.Unlock()
 	ctx, cancel := context.WithCancelCause(ctx)
 	c.toolUseCancel[toolUseID] = cancel
-	return ctx, func() { c.CancelToolUse(toolUseID, nil) }
+	return ctx, func() { _ = c.CancelToolUse(toolUseID, nil) }
 }
 
 // ToolResultContents runs all tool uses requested by the response and returns their results.

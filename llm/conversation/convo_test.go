@@ -700,7 +700,7 @@ func TestToolResultCancelContents(t *testing.T) {
 		t.Errorf("ToolResultCancelContents should not error with tool use response but no tool content: %v", err)
 	}
 	// Check if contents is nil (this is expected when no tool uses are found)
-	if contents != nil && len(contents) != 0 {
+	if len(contents) != 0 {
 		t.Errorf("ToolResultCancelContents should return nil or empty slice with tool use response but no tool content, got length %d", len(contents))
 	}
 

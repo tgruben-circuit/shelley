@@ -151,7 +151,7 @@ func (s *Server) handleExecWS(w http.ResponseWriter, r *http.Request) {
 		select {
 		case <-ctx.Done():
 			if shellCmd.Process != nil {
-				shellCmd.Process.Kill()
+				_ = shellCmd.Process.Kill()
 			}
 			return
 		case exitErr := <-done:
@@ -178,7 +178,7 @@ func (s *Server) handleExecWS(w http.ResponseWriter, r *http.Request) {
 				s.logger.Debug("Websocket read error", "error", err)
 			}
 			if shellCmd.Process != nil {
-				shellCmd.Process.Kill()
+				_ = shellCmd.Process.Kill()
 			}
 			return
 		case msg := <-msgChan:
@@ -189,7 +189,7 @@ func (s *Server) handleExecWS(w http.ResponseWriter, r *http.Request) {
 				}
 			case "resize":
 				if msg.Cols > 0 && msg.Rows > 0 {
-					setWinsize(ptmx, msg.Cols, msg.Rows)
+					_ = setWinsize(ptmx, msg.Cols, msg.Rows)
 				}
 			}
 		}

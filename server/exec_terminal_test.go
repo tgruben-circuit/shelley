@@ -28,9 +28,12 @@ func TestExecTerminal_SimpleCommand(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	conn, _, err := websocket.Dial(ctx, wsURL, nil)
+	conn, wsResp, err := websocket.Dial(ctx, wsURL, nil)
 	if err != nil {
 		t.Fatalf("Failed to dial websocket: %v", err)
+	}
+	if wsResp != nil && wsResp.Body != nil {
+		wsResp.Body.Close()
 	}
 	defer conn.Close(websocket.StatusNormalClosure, "test done")
 
@@ -42,7 +45,7 @@ func TestExecTerminal_SimpleCommand(t *testing.T) {
 
 	// Read messages until connection closes (server closes after sending exit)
 	var output strings.Builder
-	var exitCode int = -1
+	var exitCode = -1
 
 	for {
 		var msg ExecMessage
@@ -94,9 +97,12 @@ func TestExecTerminal_FailingCommand(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	conn, _, err := websocket.Dial(ctx, wsURL, nil)
+	conn, wsResp, err := websocket.Dial(ctx, wsURL, nil)
 	if err != nil {
 		t.Fatalf("Failed to dial websocket: %v", err)
+	}
+	if wsResp != nil && wsResp.Body != nil {
+		wsResp.Body.Close()
 	}
 	defer conn.Close(websocket.StatusNormalClosure, "test done")
 
@@ -141,9 +147,12 @@ func TestExecTerminal_MissingCmd(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	_, resp, err := websocket.Dial(ctx, wsURL, nil)
+	_, resp, err := websocket.Dial(ctx, wsURL, nil) //nolint:bodyclose // resp may be nil
 	if err == nil {
 		t.Fatal("Expected error for missing cmd parameter")
+	}
+	if resp != nil {
+		resp.Body.Close()
 	}
 
 	if resp != nil && resp.StatusCode != 400 {
@@ -165,9 +174,12 @@ func TestExecTerminal_WorkingDirectory(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	conn, _, err := websocket.Dial(ctx, wsURL, nil)
+	conn, wsResp, err := websocket.Dial(ctx, wsURL, nil)
 	if err != nil {
 		t.Fatalf("Failed to dial websocket: %v", err)
+	}
+	if wsResp != nil && wsResp.Body != nil {
+		wsResp.Body.Close()
 	}
 	defer conn.Close(websocket.StatusNormalClosure, "test done")
 
@@ -213,9 +225,12 @@ func TestExecTerminal_Input(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	conn, _, err := websocket.Dial(ctx, wsURL, nil)
+	conn, wsResp, err := websocket.Dial(ctx, wsURL, nil)
 	if err != nil {
 		t.Fatalf("Failed to dial websocket: %v", err)
+	}
+	if wsResp != nil && wsResp.Body != nil {
+		wsResp.Body.Close()
 	}
 	defer conn.Close(websocket.StatusNormalClosure, "test done")
 
@@ -281,9 +296,12 @@ func TestExecTerminal_LoginShell(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	conn, _, err := websocket.Dial(ctx, wsURL, nil)
+	conn, wsResp, err := websocket.Dial(ctx, wsURL, nil)
 	if err != nil {
 		t.Fatalf("Failed to dial websocket: %v", err)
+	}
+	if wsResp != nil && wsResp.Body != nil {
+		wsResp.Body.Close()
 	}
 	defer conn.Close(websocket.StatusNormalClosure, "test done")
 
@@ -295,7 +313,7 @@ func TestExecTerminal_LoginShell(t *testing.T) {
 
 	// Read messages until connection closes
 	var output strings.Builder
-	var exitCode int = -1
+	var exitCode = -1
 
 	for {
 		var msg ExecMessage

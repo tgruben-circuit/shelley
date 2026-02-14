@@ -68,7 +68,7 @@ func ExampleLoop() {
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 
-	myLoop.Go(ctx)
+	_ = myLoop.Go(ctx)
 
 	// Check usage
 	usage := myLoop.GetUsage()

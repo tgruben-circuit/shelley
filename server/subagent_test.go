@@ -18,14 +18,20 @@ func TestBuildConversationSummary(t *testing.T) {
 		Role:    llm.MessageRoleUser,
 		Content: []llm.Content{{Type: llm.ContentTypeText, Text: "Hello, please do task X"}},
 	}
-	userMsgJSON, _ := json.Marshal(userMsg)
+	userMsgJSON, err := json.Marshal(userMsg)
+	if err != nil {
+		t.Fatalf("failed to marshal user message: %v", err)
+	}
 	userMsgStr := string(userMsgJSON)
 
 	assistantMsg := llm.Message{
 		Role:    llm.MessageRoleAssistant,
 		Content: []llm.Content{{Type: llm.ContentTypeText, Text: "I'll start working on task X"}},
 	}
-	assistantMsgJSON, _ := json.Marshal(assistantMsg)
+	assistantMsgJSON, err := json.Marshal(assistantMsg)
+	if err != nil {
+		t.Fatalf("failed to marshal assistant message: %v", err)
+	}
 	assistantMsgStr := string(assistantMsgJSON)
 
 	messages := []generated.Message{
@@ -68,7 +74,10 @@ func TestBuildConversationSummary_ToolUse(t *testing.T) {
 			ToolInput: json.RawMessage(`{"command": "ls -la"}`),
 		}},
 	}
-	toolUseMsgJSON, _ := json.Marshal(toolUseMsg)
+	toolUseMsgJSON, err := json.Marshal(toolUseMsg)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
 	toolUseMsgStr := string(toolUseMsgJSON)
 
 	messages := []generated.Message{
@@ -103,7 +112,10 @@ func TestBuildConversationSummary_Truncation(t *testing.T) {
 		Role:    llm.MessageRoleUser,
 		Content: []llm.Content{{Type: llm.ContentTypeText, Text: string(longText)}},
 	}
-	userMsgJSON, _ := json.Marshal(userMsg)
+	userMsgJSON, err := json.Marshal(userMsg)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
 	userMsgStr := string(userMsgJSON)
 
 	messages := []generated.Message{
@@ -138,7 +150,10 @@ func TestBuildConversationSummary_ToolResult(t *testing.T) {
 			}},
 		}},
 	}
-	toolResultMsgJSON, _ := json.Marshal(toolResultMsg)
+	toolResultMsgJSON, err := json.Marshal(toolResultMsg)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
 	toolResultMsgStr := string(toolResultMsgJSON)
 
 	messages := []generated.Message{
@@ -173,7 +188,10 @@ func TestBuildConversationSummary_ToolError(t *testing.T) {
 			}},
 		}},
 	}
-	toolErrorMsgJSON, _ := json.Marshal(toolErrorMsg)
+	toolErrorMsgJSON, err := json.Marshal(toolErrorMsg)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
 	toolErrorMsgStr := string(toolErrorMsgJSON)
 
 	messages := []generated.Message{
@@ -199,14 +217,20 @@ func TestBuildConversationSummary_SkipsSystemMessages(t *testing.T) {
 		Role:    llm.MessageRoleUser,
 		Content: []llm.Content{{Type: llm.ContentTypeText, Text: "SECRET SYSTEM PROMPT CONTENT"}},
 	}
-	systemMsgJSON, _ := json.Marshal(systemMsg)
+	systemMsgJSON, err := json.Marshal(systemMsg)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
 	systemMsgStr := string(systemMsgJSON)
 
 	userMsg := llm.Message{
 		Role:    llm.MessageRoleUser,
 		Content: []llm.Content{{Type: llm.ContentTypeText, Text: "Regular user message"}},
 	}
-	userMsgJSON, _ := json.Marshal(userMsg)
+	userMsgJSON, err := json.Marshal(userMsg)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
 	userMsgStr := string(userMsgJSON)
 
 	messages := []generated.Message{

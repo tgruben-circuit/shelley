@@ -82,7 +82,10 @@ func TestWithAnthropicAPI(t *testing.T) {
 			"message": "Hello! Please introduce yourself briefly and tell me what you can help me with. Keep your response under 50 words.",
 			"model":   "claude-haiku-4.5",
 		}
-		reqBody, _ := json.Marshal(chatReq)
+		reqBody, err := json.Marshal(chatReq)
+		if err != nil {
+			t.Fatalf("json.Marshal: %v", err)
+		}
 
 		resp, err := http.Post(
 			testServer.URL+"/api/conversation/"+conv.ConversationID+"/chat",
@@ -191,7 +194,10 @@ func TestWithAnthropicAPI(t *testing.T) {
 			"message": "Please use the think tool to plan how you would help someone learn to code. Keep it brief.",
 			"model":   "claude-haiku-4.5",
 		}
-		reqBody, _ := json.Marshal(chatReq)
+		reqBody, err := json.Marshal(chatReq)
+		if err != nil {
+			t.Fatalf("json.Marshal: %v", err)
+		}
 
 		resp, err := http.Post(
 			testServer.URL+"/api/conversation/"+conv.ConversationID+"/chat",
@@ -298,12 +304,4 @@ func TestWithAnthropicAPI(t *testing.T) {
 
 		t.Logf("Received stream data: %s", data[:min(200, len(data))])
 	})
-}
-
-// Helper function for min
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }

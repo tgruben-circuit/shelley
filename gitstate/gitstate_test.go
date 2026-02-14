@@ -228,7 +228,8 @@ func runGit(t *testing.T, dir string, args ...string) {
 	t.Helper()
 	// For commits, use --no-verify to skip hooks
 	if len(args) > 0 && args[0] == "commit" {
-		newArgs := []string{"commit", "--no-verify"}
+		newArgs := make([]string, 0, 2+(len(args)-1))
+		newArgs = append(newArgs, "commit", "--no-verify")
 		newArgs = append(newArgs, args[1:]...)
 		args = newArgs
 	}

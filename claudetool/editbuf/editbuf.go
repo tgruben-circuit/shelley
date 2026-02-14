@@ -44,12 +44,12 @@ func NewBuffer(old []byte) *Buffer {
 	return &Buffer{old: old}
 }
 
-// Insert inserts the new string at old[pos:pos].
-func (b *Buffer) Insert(pos int, new string) {
+// Insert inserts the newStr string at old[pos:pos].
+func (b *Buffer) Insert(pos int, newStr string) {
 	if pos < 0 || pos > len(b.old) {
 		panic("invalid edit position")
 	}
-	b.q = append(b.q, edit{pos, pos, new})
+	b.q = append(b.q, edit{pos, pos, newStr})
 }
 
 // Delete deletes the text old[start:end].
@@ -60,12 +60,12 @@ func (b *Buffer) Delete(start, end int) {
 	b.q = append(b.q, edit{start, end, ""})
 }
 
-// Replace replaces old[start:end] with new.
-func (b *Buffer) Replace(start, end int, new string) {
+// Replace replaces old[start:end] with newStr.
+func (b *Buffer) Replace(start, end int, newStr string) {
 	if end < start || start < 0 || end > len(b.old) {
 		panic("invalid edit position")
 	}
-	b.q = append(b.q, edit{start, end, new})
+	b.q = append(b.q, edit{start, end, newStr})
 }
 
 // Bytes returns a new byte slice containing the original data
@@ -76,17 +76,17 @@ func (b *Buffer) Bytes() ([]byte, error) {
 	// to be applied before a replacement of the text at [x, y).
 	sort.Stable(b.q)
 
-	var new []byte
+	var result []byte
 	offset := 0
 	for i, e := range b.q {
 		if e.start < offset {
 			e0 := b.q[i-1]
 			return nil, fmt.Errorf("overlapping edits: [%d,%d)->%q, [%d,%d)->%q", e0.start, e0.end, e0.new, e.start, e.end, e.new)
 		}
-		new = append(new, b.old[offset:e.start]...)
+		result = append(result, b.old[offset:e.start]...)
 		offset = e.end
-		new = append(new, e.new...)
+		result = append(result, e.new...)
 	}
-	new = append(new, b.old[offset:]...)
-	return new, nil
+	result = append(result, b.old[offset:]...)
+	return result, nil
 }

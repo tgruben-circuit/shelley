@@ -120,7 +120,10 @@ func TestSSEUserMessageAppearsImmediately(t *testing.T) {
 		Message: "delay: 3",
 		Model:   "predictable",
 	}
-	chatBody, _ := json.Marshal(chatReq)
+	chatBody, err := json.Marshal(chatReq)
+	if err != nil {
+		t.Fatalf("json.Marshal: %v", err)
+	}
 
 	req := httptest.NewRequest("POST", "/api/conversation/"+conversationID+"/chat", strings.NewReader(string(chatBody)))
 	req.Header.Set("Content-Type", "application/json")
@@ -235,7 +238,7 @@ func TestSSEUserMessageWithRealHTTPServer(t *testing.T) {
 	defer httpServer.Close()
 
 	// Connect to SSE stream
-	sseResp, err := http.Get(httpServer.URL + "/api/conversation/" + conversationID + "/stream")
+	sseResp, err := http.Get(httpServer.URL + "/api/conversation/" + conversationID + "/stream") //nolint:bodyclose // closed on next line
 	if err != nil {
 		t.Fatalf("failed to connect to SSE stream: %v", err)
 	}
@@ -266,7 +269,10 @@ func TestSSEUserMessageWithRealHTTPServer(t *testing.T) {
 		Message: "delay: 5",
 		Model:   "predictable",
 	}
-	chatBody, _ := json.Marshal(chatReq)
+	chatBody, err := json.Marshal(chatReq)
+	if err != nil {
+		t.Fatalf("json.Marshal: %v", err)
+	}
 
 	resp, err := http.Post(
 		httpServer.URL+"/api/conversation/"+conversationID+"/chat",
@@ -366,7 +372,10 @@ func TestSSEUserMessageWithExistingConnection(t *testing.T) {
 		Message: "delay: 5",
 		Model:   "predictable",
 	}
-	chatBody, _ := json.Marshal(chatReq)
+	chatBody, err := json.Marshal(chatReq)
+	if err != nil {
+		t.Fatalf("json.Marshal: %v", err)
+	}
 
 	req := httptest.NewRequest("POST", "/api/conversation/"+conversationID+"/chat", strings.NewReader(string(chatBody)))
 	req.Header.Set("Content-Type", "application/json")

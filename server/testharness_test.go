@@ -67,7 +67,10 @@ func (h *TestHarness) NewConversation(msg, cwd string) *TestHarness {
 		Model:   "predictable",
 		Cwd:     cwd,
 	}
-	chatBody, _ := json.Marshal(chatReq)
+	chatBody, err := json.Marshal(chatReq)
+	if err != nil {
+		h.t.Fatalf("json.Marshal: %v", err)
+	}
 
 	req := httptest.NewRequest("POST", "/api/conversations/new", strings.NewReader(string(chatBody)))
 	req.Header.Set("Content-Type", "application/json")
@@ -101,7 +104,10 @@ func (h *TestHarness) Chat(msg string) *TestHarness {
 		Message: msg,
 		Model:   "predictable",
 	}
-	chatBody, _ := json.Marshal(chatReq)
+	chatBody, err := json.Marshal(chatReq)
+	if err != nil {
+		h.t.Fatalf("json.Marshal: %v", err)
+	}
 
 	req := httptest.NewRequest("POST", "/api/conversation/"+h.convID+"/chat", strings.NewReader(string(chatBody)))
 	req.Header.Set("Content-Type", "application/json")

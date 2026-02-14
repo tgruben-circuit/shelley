@@ -115,7 +115,7 @@ func TestInterruptionDuringToolExecution(t *testing.T) {
 	loopDone.Add(1)
 	go func() {
 		defer loopDone.Done()
-		loop.Go(ctx)
+		_ = loop.Go(ctx)
 	}()
 
 	// Wait for tool to start
@@ -255,7 +255,7 @@ func TestInterruptionDuringMultiToolChain(t *testing.T) {
 	loopDone.Add(1)
 	go func() {
 		defer loopDone.Done()
-		loop.Go(ctx)
+		_ = loop.Go(ctx)
 	}()
 
 	// Wait for first tool call to complete
@@ -429,7 +429,7 @@ func TestNoInterruptionNormalFlow(t *testing.T) {
 	loopDone.Add(1)
 	go func() {
 		defer loopDone.Done()
-		loop.Go(ctx)
+		_ = loop.Go(ctx)
 	}()
 
 	// Wait for completion

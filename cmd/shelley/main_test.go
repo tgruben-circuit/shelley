@@ -219,8 +219,8 @@ func TestSystemdListenerIntegration(t *testing.T) {
 	}
 
 	// Kill the server
-	cmd.Process.Kill()
-	cmd.Wait()
+	_ = cmd.Process.Kill()
+	_ = cmd.Wait()
 
 	if err != nil {
 		t.Fatalf("Failed to connect to server: %v\nstdout: %s\nstderr: %s", err, stdoutBuf.String(), stderrBuf.String())

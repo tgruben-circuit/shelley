@@ -82,7 +82,10 @@ func TestSubagentTool_Run(t *testing.T) {
 		Slug:   "test-task",
 		Prompt: "Do something useful",
 	}
-	inputJSON, _ := json.Marshal(input)
+	inputJSON, err := json.Marshal(input)
+	if err != nil {
+		t.Fatalf("json.Marshal: %v", err)
+	}
 
 	result := tool.Run(context.Background(), inputJSON)
 	if result.Error != nil {
@@ -125,7 +128,10 @@ func TestSubagentTool_Validation(t *testing.T) {
 	// Test empty slug
 	t.Run("empty slug", func(t *testing.T) {
 		input := subagentInput{Slug: "", Prompt: "test"}
-		inputJSON, _ := json.Marshal(input)
+		inputJSON, err := json.Marshal(input)
+		if err != nil {
+			t.Fatalf("json.Marshal: %v", err)
+		}
 		result := tool.Run(context.Background(), inputJSON)
 		if result.Error == nil {
 			t.Error("expected error for empty slug")
@@ -135,7 +141,10 @@ func TestSubagentTool_Validation(t *testing.T) {
 	// Test empty prompt
 	t.Run("empty prompt", func(t *testing.T) {
 		input := subagentInput{Slug: "test", Prompt: ""}
-		inputJSON, _ := json.Marshal(input)
+		inputJSON, err := json.Marshal(input)
+		if err != nil {
+			t.Fatalf("json.Marshal: %v", err)
+		}
 		result := tool.Run(context.Background(), inputJSON)
 		if result.Error == nil {
 			t.Error("expected error for empty prompt")
@@ -145,7 +154,10 @@ func TestSubagentTool_Validation(t *testing.T) {
 	// Test invalid slug (only special chars)
 	t.Run("invalid slug", func(t *testing.T) {
 		input := subagentInput{Slug: "@#$%", Prompt: "test"}
-		inputJSON, _ := json.Marshal(input)
+		inputJSON, err := json.Marshal(input)
+		if err != nil {
+			t.Fatalf("json.Marshal: %v", err)
+		}
 		result := tool.Run(context.Background(), inputJSON)
 		if result.Error == nil {
 			t.Error("expected error for invalid slug")

@@ -103,7 +103,7 @@ func (s *Server) handleListNotificationChannels(w http.ResponseWriter, r *http.R
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(apiChannels)
+	_ = json.NewEncoder(w).Encode(apiChannels) //nolint:errchkjson // best-effort HTTP response
 }
 
 func (s *Server) handleCreateNotificationChannel(w http.ResponseWriter, r *http.Request) {
@@ -160,7 +160,7 @@ func (s *Server) handleCreateNotificationChannel(w http.ResponseWriter, r *http.
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(toNotificationChannelAPI(*ch))
+	_ = json.NewEncoder(w).Encode(toNotificationChannelAPI(*ch)) //nolint:errchkjson // best-effort HTTP response
 }
 
 func (s *Server) handleNotificationChannel(w http.ResponseWriter, r *http.Request) {
@@ -206,7 +206,7 @@ func (s *Server) handleGetNotificationChannel(w http.ResponseWriter, r *http.Req
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(toNotificationChannelAPI(*ch))
+	_ = json.NewEncoder(w).Encode(toNotificationChannelAPI(*ch)) //nolint:errchkjson // best-effort HTTP response
 }
 
 func (s *Server) handleUpdateNotificationChannel(w http.ResponseWriter, r *http.Request, channelID string) {
@@ -247,7 +247,7 @@ func (s *Server) handleUpdateNotificationChannel(w http.ResponseWriter, r *http.
 	s.ReloadNotificationChannels()
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(toNotificationChannelAPI(*ch))
+	_ = json.NewEncoder(w).Encode(toNotificationChannelAPI(*ch)) //nolint:errchkjson // best-effort HTTP response
 }
 
 func (s *Server) handleDeleteNotificationChannel(w http.ResponseWriter, r *http.Request, channelID string) {
@@ -280,7 +280,7 @@ func (s *Server) handleTestNotificationChannel(w http.ResponseWriter, r *http.Re
 	ch, err := notifications.CreateFromConfig(config, s.logger)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]any{
+		_ = json.NewEncoder(w).Encode(map[string]any{ //nolint:errchkjson // best-effort HTTP response
 			"success": false,
 			"message": fmt.Sprintf("Failed to create channel: %v", err),
 		})
@@ -302,7 +302,7 @@ func (s *Server) handleTestNotificationChannel(w http.ResponseWriter, r *http.Re
 
 	if err := ch.Send(ctx, testEvent); err != nil {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]any{
+		_ = json.NewEncoder(w).Encode(map[string]any{ //nolint:errchkjson // best-effort HTTP response
 			"success": false,
 			"message": fmt.Sprintf("Test failed: %v", err),
 		})
@@ -310,7 +310,7 @@ func (s *Server) handleTestNotificationChannel(w http.ResponseWriter, r *http.Re
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]any{
+	_ = json.NewEncoder(w).Encode(map[string]any{ //nolint:errchkjson // best-effort HTTP response
 		"success": true,
 		"message": "Test notification sent successfully",
 	})
@@ -323,7 +323,7 @@ func (s *Server) handleNotificationChannelTypes(w http.ResponseWriter, r *http.R
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(s.getNotificationChannelTypes())
+	_ = json.NewEncoder(w).Encode(s.getNotificationChannelTypes()) //nolint:errchkjson // best-effort HTTP response
 }
 
 // getNotificationChannelTypes returns channel type metadata for the frontend.

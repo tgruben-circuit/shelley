@@ -110,11 +110,11 @@ func TestBashTool(t *testing.T) {
 			WorkingDir: NewMutableWorkingDir("/"),
 			Timeouts:   customTimeouts,
 		}
-		tool := customBash.Tool()
+		customTool := customBash.Tool()
 
 		input := json.RawMessage(`{"command":"sleep 0.5 && echo 'Should not see this'"}`)
 
-		toolOut := tool.Run(context.Background(), input)
+		toolOut := customTool.Run(context.Background(), input)
 		if toolOut.Error == nil {
 			t.Errorf("Expected timeout error, got none")
 		} else if !strings.Contains(toolOut.Error.Error(), "timed out") {
@@ -436,7 +436,7 @@ func TestIsNoTrailerSet(t *testing.T) {
 		if err := cmd.Run(); err != nil {
 			t.Skipf("Could not set git config: %v", err)
 		}
-		defer exec.Command("git", "config", "--global", "--unset", "shelley.no-trailer").Run()
+		defer func() { _ = exec.Command("git", "config", "--global", "--unset", "shelley.no-trailer").Run() }()
 
 		if !bashTool.isNoTrailerSet() {
 			t.Error("Expected isNoTrailerSet() to be true when shelley.no-trailer=true")
@@ -449,7 +449,7 @@ func TestIsNoTrailerSet(t *testing.T) {
 		if err := cmd.Run(); err != nil {
 			t.Skipf("Could not set git config: %v", err)
 		}
-		defer exec.Command("git", "config", "--global", "--unset", "shelley.no-trailer").Run()
+		defer func() { _ = exec.Command("git", "config", "--global", "--unset", "shelley.no-trailer").Run() }()
 
 		if bashTool.isNoTrailerSet() {
 			t.Error("Expected isNoTrailerSet() to be false when shelley.no-trailer=false")

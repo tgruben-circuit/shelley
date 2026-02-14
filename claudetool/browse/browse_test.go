@@ -165,10 +165,13 @@ func TestNavigateTool(t *testing.T) {
 
 	// Create input for the navigate tool
 	input := map[string]string{"url": "https://example.com"}
-	inputJSON, _ := json.Marshal(input)
+	inputJSON, err := json.Marshal(input)
+	if err != nil {
+		t.Fatalf("Failed to marshal input: %v", err)
+	}
 
 	// Call the tool
-	toolOut := navTool.Run(ctx, []byte(inputJSON))
+	toolOut := navTool.Run(ctx, inputJSON)
 	if toolOut.Error != nil {
 		t.Fatalf("Error running navigate tool: %v", toolOut.Error)
 	}
@@ -931,16 +934,16 @@ func TestBrowserDownload(t *testing.T) {
 	})
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
-		w.Write([]byte(fmt.Sprintf(`<!DOCTYPE html>
+		w.Write([]byte(`<!DOCTYPE html>
 <html>
 <body>
 <a id="download-link" href="/download">Download</a>
 </body>
-</html>`)))
+</html>`))
 	})
 
 	server := &http.Server{Handler: mux}
-	go server.Serve(listener)
+	go func() { _ = server.Serve(listener) }()
 	defer server.Close()
 
 	// Create browser tools
@@ -999,7 +1002,7 @@ func TestBrowserDownload(t *testing.T) {
 	if !downloadFound {
 		// List what's in the directory for debugging
 		files, _ := os.ReadDir(DownloadDir)
-		var names []string
+		names := make([]string, 0, len(files))
 		for _, f := range files {
 			names = append(names, f.Name())
 		}
@@ -1028,7 +1031,7 @@ func TestBrowserDownloadReported(t *testing.T) {
 	})
 
 	server := &http.Server{Handler: mux}
-	go server.Serve(listener)
+	go func() { _ = server.Serve(listener) }()
 	defer server.Close()
 
 	// Create browser tools

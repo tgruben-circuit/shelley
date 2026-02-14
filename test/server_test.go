@@ -114,7 +114,10 @@ func TestServerEndToEnd(t *testing.T) {
 
 		// Send a chat message using predictable model
 		chatReq := map[string]interface{}{"message": "Hello, can you help me?", "model": "predictable"}
-		reqBody, _ := json.Marshal(chatReq)
+		reqBody, err := json.Marshal(chatReq)
+		if err != nil {
+			t.Fatalf("json.Marshal: %v", err)
+		}
 
 		resp, err := http.Post(
 			testServer.URL+"/api/conversation/"+conv.ConversationID+"/chat",
@@ -242,7 +245,10 @@ func TestServerEndToEnd(t *testing.T) {
 			Model:   "predictable",
 		}
 
-		chatBody, _ := json.Marshal(chatRequest)
+		chatBody, err := json.Marshal(chatRequest)
+		if err != nil {
+			t.Fatalf("json.Marshal: %v", err)
+		}
 		chatResp, err := http.Post(
 			testServer.URL+"/api/conversation/"+conv.ConversationID+"/chat",
 			"application/json",
@@ -298,7 +304,10 @@ func TestServerEndToEnd(t *testing.T) {
 
 		// Test invalid chat request
 		invalidReq := map[string]string{"not_message": "test"}
-		reqBody, _ := json.Marshal(invalidReq)
+		reqBody, err := json.Marshal(invalidReq)
+		if err != nil {
+			t.Fatalf("json.Marshal: %v", err)
+		}
 		chatResp, err := http.Post(
 			testServer.URL+"/api/conversation/test/chat",
 			"application/json",
@@ -749,7 +758,10 @@ func TestSystemPromptSentToLLM(t *testing.T) {
 			"message": "Hello",
 			"model":   "predictable",
 		}
-		body, _ := json.Marshal(chatReq)
+		body, err := json.Marshal(chatReq)
+		if err != nil {
+			t.Fatalf("json.Marshal: %v", err)
+		}
 		resp, err := http.Post(ts.URL+"/api/conversations/new", "application/json", bytes.NewBuffer(body))
 		if err != nil {
 			t.Fatalf("Failed to send message: %v", err)
@@ -803,7 +815,10 @@ func TestSystemPromptSentToLLM(t *testing.T) {
 			"message": "Hello",
 			"model":   "predictable",
 		}
-		body, _ := json.Marshal(chatReq)
+		body, err := json.Marshal(chatReq)
+		if err != nil {
+			t.Fatalf("json.Marshal: %v", err)
+		}
 		resp, err := http.Post(ts.URL+"/api/conversations/new", "application/json", bytes.NewBuffer(body))
 		if err != nil {
 			t.Fatalf("Failed to send first message: %v", err)
@@ -844,7 +859,10 @@ func TestSystemPromptSentToLLM(t *testing.T) {
 			"message": "what is the date",
 			"model":   "predictable",
 		}
-		body2, _ := json.Marshal(chatReq2)
+		body2, err := json.Marshal(chatReq2)
+		if err != nil {
+			t.Fatalf("json.Marshal: %v", err)
+		}
 		resp2, err := http.Post(ts.URL+"/api/conversation/"+conversationID+"/chat", "application/json", bytes.NewBuffer(body2))
 		if err != nil {
 			t.Fatalf("Failed to send second message: %v", err)
@@ -1033,7 +1051,8 @@ func TestGitStateChangeCreatesGitInfoMessage(t *testing.T) {
 	runCmd := func(name string, args ...string) {
 		// For git commits, use --no-verify to skip hooks
 		if name == "git" && len(args) > 0 && args[0] == "commit" {
-			newArgs := []string{"commit", "--no-verify"}
+			newArgs := make([]string, 0, 2+(len(args)-1))
+			newArgs = append(newArgs, "commit", "--no-verify")
 			newArgs = append(newArgs, args[1:]...)
 			args = newArgs
 		}
@@ -1096,7 +1115,10 @@ func TestGitStateChangeCreatesGitInfoMessage(t *testing.T) {
 		"model":   "predictable",
 		"cwd":     workDir,
 	}
-	body, _ := json.Marshal(chatReq)
+	body, err := json.Marshal(chatReq)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
 	resp, err := http.Post(ts.URL+"/api/conversations/new", "application/json", bytes.NewBuffer(body))
 	if err != nil {
 		t.Fatalf("Failed to send message: %v", err)
@@ -1187,7 +1209,10 @@ func TestSubagentEndToEnd(t *testing.T) {
 		"message": "subagent: test-worker echo hello",
 		"model":   "predictable",
 	}
-	reqBody, _ := json.Marshal(chatReq)
+	reqBody, err := json.Marshal(chatReq)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
 
 	resp, err := client.Post(ts.URL+"/api/conversations/new", "application/json", bytes.NewBuffer(reqBody))
 	if err != nil {
@@ -1371,7 +1396,10 @@ func TestContinueConversation(t *testing.T) {
 		"source_conversation_id": sourceConv.ConversationID,
 		"model":                  "predictable",
 	}
-	body, _ := json.Marshal(reqBody)
+	body, err := json.Marshal(reqBody)
+	if err != nil {
+		t.Fatalf("json.Marshal: %v", err)
+	}
 
 	resp, err := http.Post(testServer.URL+"/api/conversations/continue", "application/json", bytes.NewBuffer(body))
 	if err != nil {
@@ -1485,7 +1513,10 @@ func TestContinueConversation(t *testing.T) {
 		"message": "Please focus on the bash commands.",
 		"model":   "predictable",
 	}
-	followUpBody, _ := json.Marshal(followUpReq)
+	followUpBody, err := json.Marshal(followUpReq)
+	if err != nil {
+		t.Fatalf("json.Marshal: %v", err)
+	}
 
 	followUpResp, err := http.Post(testServer.URL+"/api/conversation/"+newConversationID+"/chat", "application/json", bytes.NewBuffer(followUpBody))
 	if err != nil {

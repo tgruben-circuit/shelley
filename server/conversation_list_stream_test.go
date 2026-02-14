@@ -68,7 +68,10 @@ func TestConversationStreamReceivesListUpdateForNewConversation(t *testing.T) {
 		Message: "hello",
 		Model:   "predictable",
 	}
-	chatBody, _ := json.Marshal(chatReq)
+	chatBody, err := json.Marshal(chatReq)
+	if err != nil {
+		t.Fatalf("json.Marshal: %v", err)
+	}
 	req := httptest.NewRequest("POST", "/api/conversations/new", strings.NewReader(string(chatBody)))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
@@ -167,7 +170,10 @@ func TestConversationStreamReceivesListUpdateForRename(t *testing.T) {
 
 	// Rename conv2
 	renameReq := RenameRequest{Slug: "test-slug-rename"}
-	renameBody, _ := json.Marshal(renameReq)
+	renameBody, err := json.Marshal(renameReq)
+	if err != nil {
+		t.Fatalf("json.Marshal: %v", err)
+	}
 	req := httptest.NewRequest("POST", "/api/conversation/"+conv2.ConversationID+"/rename", strings.NewReader(string(renameBody)))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()

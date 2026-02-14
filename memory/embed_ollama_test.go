@@ -37,7 +37,7 @@ func TestOllamaEmbedder(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(ollamaEmbedResponse{Embeddings: wantEmbeddings})
+		_ = json.NewEncoder(w).Encode(ollamaEmbedResponse{Embeddings: wantEmbeddings})
 	}))
 	defer srv.Close()
 

@@ -168,7 +168,10 @@ func TestOrphanToolResultAfterCancellation(t *testing.T) {
 		Message: "echo: continue",
 		Model:   "predictable",
 	}
-	resumeBody, _ := json.Marshal(resumeReq)
+	resumeBody, err := json.Marshal(resumeReq)
+	if err != nil {
+		t.Fatalf("json.Marshal: %v", err)
+	}
 
 	req := httptest.NewRequest("POST", "/api/conversation/"+conversationID+"/chat", strings.NewReader(string(resumeBody)))
 	req.Header.Set("Content-Type", "application/json")
@@ -297,7 +300,10 @@ func TestOrphanToolResultFiltering(t *testing.T) {
 		Message: "echo: test",
 		Model:   "predictable",
 	}
-	chatBody, _ := json.Marshal(chatReq)
+	chatBody, err := json.Marshal(chatReq)
+	if err != nil {
+		t.Fatalf("json.Marshal: %v", err)
+	}
 
 	req := httptest.NewRequest("POST", "/api/conversation/"+conversationID+"/chat", strings.NewReader(string(chatBody)))
 	req.Header.Set("Content-Type", "application/json")

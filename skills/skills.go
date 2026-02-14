@@ -333,7 +333,7 @@ func DiscoverInTree(workingDir, gitRoot string) []Skill {
 		searchRoot = workingDir
 	}
 
-	filepath.Walk(searchRoot, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.Walk(searchRoot, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil // Continue on errors
 		}

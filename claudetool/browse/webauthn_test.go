@@ -95,7 +95,7 @@ func TestWebAuthnPageDoesNotCrash(t *testing.T) {
 	})
 
 	server := &http.Server{Handler: mux}
-	go server.Serve(listener)
+	go func() { _ = server.Serve(listener) }()
 	defer server.Close()
 
 	testURL := fmt.Sprintf("http://127.0.0.1:%d/webauthn-test.html", port)

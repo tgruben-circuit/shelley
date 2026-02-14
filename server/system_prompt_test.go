@@ -106,13 +106,6 @@ func TestSystemPromptDetectsGitInWorkingDir(t *testing.T) {
 	}
 }
 
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
 // TestSystemPromptIncludesSkillsFromAnyWorkingDir verifies that user-level
 // skills (e.g. from ~/.config/agents/skills) appear in the system prompt
 // regardless of the conversation's working directory.

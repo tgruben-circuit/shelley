@@ -813,7 +813,7 @@ func (s *Service) Do(ctx context.Context, ir *llm.Request) (*llm.Response, error
 	}
 
 	// Convert tools
-	var tools []openai.Tool
+	tools := make([]openai.Tool, 0, len(ir.Tools))
 	for _, t := range ir.Tools {
 		tools = append(tools, fromLLMTool(t))
 	}

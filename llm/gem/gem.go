@@ -97,8 +97,12 @@ func convertJSONSchemaToGeminiSchema(schemaJSON map[string]any) gemini.Schema {
 				schema.Enum[i] = strVal
 			} else {
 				// Convert non-string values to string
-				valBytes, _ := json.Marshal(v)
-				schema.Enum[i] = string(valBytes)
+				valBytes, err := json.Marshal(v)
+				if err != nil {
+					schema.Enum[i] = fmt.Sprintf("%v", v)
+				} else {
+					schema.Enum[i] = string(valBytes)
+				}
 			}
 		}
 	}
@@ -360,10 +364,12 @@ func convertGeminiResponseToContent(res *gemini.Response) []llm.Content {
 				"thought_signature", part.ThoughtSignature)
 		} else if part.FunctionResponse != nil {
 			// We shouldn't normally get function responses from the model, but just in case
-			respData, _ := json.Marshal(part.FunctionResponse.Response)
-			slog.DebugContext(context.Background(), "unexpected_function_response",
-				"name", part.FunctionResponse.Name,
-				"response", string(respData))
+			respData, err := json.Marshal(part.FunctionResponse.Response)
+			if err == nil {
+				slog.DebugContext(context.Background(), "unexpected_function_response",
+					"name", part.FunctionResponse.Name,
+					"response", string(respData))
+			}
 		}
 	}
 
@@ -415,12 +421,16 @@ func calculateUsage(req *gemini.Request, res *gemini.Response) llm.Usage {
 				inputTokens += uint64(len(part.Text)) / 4
 			} else if part.FunctionCall != nil {
 				// Estimate function call tokens
-				argBytes, _ := json.Marshal(part.FunctionCall.Args)
-				inputTokens += uint64(len(part.FunctionCall.Name)+len(argBytes)) / 4
+				argBytes, err := json.Marshal(part.FunctionCall.Args)
+				if err == nil {
+					inputTokens += uint64(len(part.FunctionCall.Name)+len(argBytes)) / 4
+				}
 			} else if part.FunctionResponse != nil {
 				// Estimate function response tokens
-				resBytes, _ := json.Marshal(part.FunctionResponse.Response)
-				inputTokens += uint64(len(part.FunctionResponse.Name)+len(resBytes)) / 4
+				resBytes, err := json.Marshal(part.FunctionResponse.Response)
+				if err == nil {
+					inputTokens += uint64(len(part.FunctionResponse.Name)+len(resBytes)) / 4
+				}
 			}
 		}
 	}
@@ -432,8 +442,10 @@ func calculateUsage(req *gemini.Request, res *gemini.Response) llm.Usage {
 				outputTokens += uint64(len(part.Text)) / 4
 			} else if part.FunctionCall != nil {
 				// Estimate function call tokens
-				argBytes, _ := json.Marshal(part.FunctionCall.Args)
-				outputTokens += uint64(len(part.FunctionCall.Name)+len(argBytes)) / 4
+				argBytes, err := json.Marshal(part.FunctionCall.Args)
+				if err == nil {
+					outputTokens += uint64(len(part.FunctionCall.Name)+len(argBytes)) / 4
+				}
 			}
 		}
 	}
@@ -485,7 +497,7 @@ func (s *Service) Do(ctx context.Context, ir *llm.Request) (*llm.Response, error
 
 	// Log tool-related information if any tools are present
 	if len(ir.Tools) > 0 {
-		var toolNames []string
+		toolNames := make([]string, 0, len(ir.Tools))
 		for _, tool := range ir.Tools {
 			toolNames = append(toolNames, tool.Name)
 		}
@@ -546,11 +558,11 @@ func (s *Service) Do(ctx context.Context, ir *llm.Request) (*llm.Response, error
 	// Retry mechanism for handling server errors and rate limiting
 	backoff := []time.Duration{1 * time.Second, 3 * time.Second, 5 * time.Second, 10 * time.Second}
 	for attempts := 0; attempts <= len(backoff); attempts++ {
-		gemApiErr := error(nil)
-		gemRes, gemApiErr = model.GenerateContent(ctx, gemReq)
+		gemAPIErr := error(nil)
+		gemRes, gemAPIErr = model.GenerateContent(ctx, gemReq)
 		endTime = time.Now()
 
-		if gemApiErr == nil {
+		if gemAPIErr == nil {
 			// Successful response
 			// Log the structured Gemini response
 			if resJSON, err := json.MarshalIndent(gemRes, "", "  "); err == nil {
@@ -561,21 +573,21 @@ func (s *Service) Do(ctx context.Context, ir *llm.Request) (*llm.Response, error
 
 		if attempts == len(backoff) {
 			// We've exhausted all retry attempts
-			return nil, fmt.Errorf("gemini: API error after %d attempts: %w", attempts, gemApiErr)
+			return nil, fmt.Errorf("gemini: API error after %d attempts: %w", attempts, gemAPIErr)
 		}
 
 		// Check if the error is retryable (e.g., server error or rate limiting)
-		if strings.Contains(gemApiErr.Error(), "429") || strings.Contains(gemApiErr.Error(), "5") {
+		if strings.Contains(gemAPIErr.Error(), "429") || strings.Contains(gemAPIErr.Error(), "5") {
 			// Rate limited or server error - wait and retry
 			random := time.Duration(rand.Int63n(int64(time.Second)))
 			sleep := backoff[attempts] + random
-			slog.WarnContext(ctx, "gemini_request_retry", "error", gemApiErr.Error(), "attempt", attempts+1, "sleep", sleep)
+			slog.WarnContext(ctx, "gemini_request_retry", "error", gemAPIErr.Error(), "attempt", attempts+1, "sleep", sleep)
 			time.Sleep(sleep)
 			continue
 		}
 
 		// Non-retryable error
-		return nil, fmt.Errorf("gemini: API error: %w", gemApiErr)
+		return nil, fmt.Errorf("gemini: API error: %w", gemAPIErr)
 	}
 
 	content := convertGeminiResponseToContent(gemRes)

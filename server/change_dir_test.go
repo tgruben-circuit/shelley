@@ -15,7 +15,6 @@ import (
 
 	"shelley.exe.dev/claudetool"
 	"shelley.exe.dev/db"
-	"shelley.exe.dev/db/generated"
 	"shelley.exe.dev/loop"
 )
 
@@ -60,7 +59,10 @@ func TestChangeDirAffectsBash(t *testing.T) {
 		Message: "change_dir: " + subDir,
 		Model:   "predictable",
 	}
-	changeDirBody, _ := json.Marshal(changeDirReq)
+	changeDirBody, err := json.Marshal(changeDirReq)
+	if err != nil {
+		t.Fatalf("json.Marshal: %v", err)
+	}
 
 	req := httptest.NewRequest("POST", "/api/conversation/"+conversationID+"/chat", strings.NewReader(string(changeDirBody)))
 	req.Header.Set("Content-Type", "application/json")
@@ -79,7 +81,10 @@ func TestChangeDirAffectsBash(t *testing.T) {
 		Message: "bash: pwd",
 		Model:   "predictable",
 	}
-	pwdBody, _ := json.Marshal(pwdReq)
+	pwdBody, err := json.Marshal(pwdReq)
+	if err != nil {
+		t.Fatalf("json.Marshal: %v", err)
+	}
 
 	req2 := httptest.NewRequest("POST", "/api/conversation/"+conversationID+"/chat", strings.NewReader(string(pwdBody)))
 	req2.Header.Set("Content-Type", "application/json")
@@ -150,11 +155,6 @@ func waitForMessageContaining(t *testing.T, database *db.DB, conversationID, tex
 		time.Sleep(50 * time.Millisecond)
 	}
 	t.Fatalf("did not find message containing %q within %v", text, timeout)
-}
-
-// getConversationMessages retrieves all messages for a conversation.
-func getConversationMessages(database *db.DB, conversationID string) ([]generated.Message, error) {
-	return database.ListMessages(context.Background(), conversationID)
 }
 
 // truncate truncates a string to maxLen characters.
@@ -229,7 +229,7 @@ func TestChangeDirBroadcastsCwdUpdate(t *testing.T) {
 	req, _ := http.NewRequestWithContext(ctx, "GET", ts.URL+"/api/conversation/"+conversationID+"/stream", nil)
 	req.Header.Set("Accept", "text/event-stream")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := http.DefaultClient.Do(req) //nolint:bodyclose // closed on next line
 	if err != nil {
 		t.Fatalf("failed to connect to SSE: %v", err)
 	}
@@ -264,7 +264,10 @@ func TestChangeDirBroadcastsCwdUpdate(t *testing.T) {
 		Message: "change_dir: " + subDir,
 		Model:   "predictable",
 	}
-	changeDirBody, _ := json.Marshal(changeDirReq)
+	changeDirBody, err := json.Marshal(changeDirReq)
+	if err != nil {
+		t.Fatalf("json.Marshal: %v", err)
+	}
 
 	chatReq, _ := http.NewRequest("POST", ts.URL+"/api/conversation/"+conversationID+"/chat", strings.NewReader(string(changeDirBody)))
 	chatReq.Header.Set("Content-Type", "application/json")

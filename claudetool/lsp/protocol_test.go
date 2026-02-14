@@ -106,7 +106,7 @@ func TestClientContextCancellation(t *testing.T) {
 
 	// Kill the process directly — don't use Close() which tries graceful shutdown
 	if client.cmd.Process != nil {
-		client.cmd.Process.Kill()
+		_ = client.cmd.Process.Kill()
 	}
 }
 
@@ -171,7 +171,9 @@ func TestClientCallWithMockServer(t *testing.T) {
 		var req struct {
 			ID int64 `json:"id"`
 		}
-		json.Unmarshal(body, &req)
+		if err := json.Unmarshal(body, &req); err != nil {
+			return
+		}
 
 		// Send response
 		resp := fmt.Sprintf(`{"jsonrpc":"2.0","id":%d,"result":{"capabilities":{}}}`, req.ID)

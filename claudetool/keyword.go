@@ -196,7 +196,8 @@ func (k *KeywordTool) keywordRun(ctx context.Context, m json.RawMessage) llm.Too
 }
 
 func ripgrep(ctx context.Context, wd string, terms []string) (string, error) {
-	args := []string{"-C", "10", "-i", "--line-number", "--with-filename"}
+	args := make([]string, 0, 5+2*len(terms))
+	args = append(args, "-C", "10", "-i", "--line-number", "--with-filename")
 	for _, term := range terms {
 		args = append(args, "-e", term)
 	}

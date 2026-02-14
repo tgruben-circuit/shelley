@@ -48,7 +48,7 @@ type ReferenceContext struct {
 type ReferenceParams struct {
 	TextDocument TextDocumentIdentifier `json:"textDocument"`
 	Position     Position               `json:"position"`
-	Context      ReferenceContext        `json:"context"`
+	Context      ReferenceContext       `json:"context"`
 }
 
 // WorkspaceSymbolParams is the params for a workspace/symbol request.

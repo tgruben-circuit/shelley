@@ -76,8 +76,10 @@ func (d *DB) SearchFTS(query, sourceType string, limit int) ([]SearchResult, err
 	return results, rows.Err()
 }
 
-// TODO: consider sqlite-vec or ANN index at scale
-// SearchVector performs a brute-force cosine similarity search over all chunks
+// SearchVector performs a brute-force cosine similarity search over all chunks.
+// TODO: consider sqlite-vec or ANN index at scale.
+//
+// SearchVector scans all chunks
 // with non-NULL embeddings. If sourceType is non-empty, only matching chunks
 // are considered. Returns the top `limit` results sorted by similarity descending.
 func (d *DB) SearchVector(queryVec []float32, sourceType string, limit int) ([]SearchResult, error) {
@@ -203,24 +205,24 @@ func normalizeScores(results []SearchResult, invert bool) map[string]float64 {
 		return m
 	}
 
-	min, max := results[0].Score, results[0].Score
+	minScore, maxScore := results[0].Score, results[0].Score
 	for _, r := range results[1:] {
-		if r.Score < min {
-			min = r.Score
+		if r.Score < minScore {
+			minScore = r.Score
 		}
-		if r.Score > max {
-			max = r.Score
+		if r.Score > maxScore {
+			maxScore = r.Score
 		}
 	}
 
-	rng := max - min
+	rng := maxScore - minScore
 	for _, r := range results {
 		if rng == 0 {
 			m[r.ChunkID] = 1.0
 		} else if invert {
-			m[r.ChunkID] = 1.0 - (r.Score-min)/rng
+			m[r.ChunkID] = 1.0 - (r.Score-minScore)/rng
 		} else {
-			m[r.ChunkID] = (r.Score - min) / rng
+			m[r.ChunkID] = (r.Score - minScore) / rng
 		}
 	}
 	return m

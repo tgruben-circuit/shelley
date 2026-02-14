@@ -78,7 +78,7 @@ func (s *Server) handleRead(w http.ResponseWriter, r *http.Request) {
 	}
 	// Reasonable short-term caching for assets, allow quick refresh during sessions
 	w.Header().Set("Cache-Control", "public, max-age=300")
-	io.Copy(w, f)
+	_, _ = io.Copy(w, f)
 }
 
 // handleWriteFile writes content to a file (for diff viewer edit mode)
@@ -117,7 +117,7 @@ func (s *Server) handleWriteFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+	_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok"}) //nolint:errchkjson // best-effort HTTP response
 }
 
 // handleUpload handles file uploads via POST /api/upload
@@ -180,7 +180,7 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 
 	// Return the path to the saved file
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"path": filename})
+	_ = json.NewEncoder(w).Encode(map[string]string{"path": filename}) //nolint:errchkjson // best-effort HTTP response
 }
 
 // staticHandler serves files from the provided filesystem.
@@ -279,7 +279,7 @@ func (s *Server) staticHandler(fsys http.FileSystem) http.Handler {
 			if acceptsGzip(r) {
 				// Client accepts gzip - serve compressed directly
 				w.Header().Set("Content-Encoding", "gzip")
-				io.Copy(w, gzFile)
+				_, _ = io.Copy(w, gzFile)
 			} else {
 				// Rare: client doesn't accept gzip - decompress on the fly
 				gr, err := gzip.NewReader(gzFile)
@@ -288,7 +288,7 @@ func (s *Server) staticHandler(fsys http.FileSystem) http.Handler {
 					return
 				}
 				defer gr.Close()
-				io.Copy(w, gr)
+				_, _ = io.Copy(w, gr)
 			}
 			return
 		}
@@ -502,7 +502,7 @@ func (s *Server) handleConversations(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(result)
+	_ = json.NewEncoder(w).Encode(result) //nolint:errchkjson // best-effort HTTP response
 }
 
 // conversationMux returns a mux for /api/conversation/<id>/* routes
@@ -576,7 +576,7 @@ func (s *Server) handleGetConversation(w http.ResponseWriter, r *http.Request, c
 
 	w.Header().Set("Content-Type", "application/json")
 	apiMessages := toAPIMessages(messages)
-	json.NewEncoder(w).Encode(StreamResponse{
+	_ = json.NewEncoder(w).Encode(StreamResponse{ //nolint:errchkjson // best-effort HTTP response
 		Messages:     apiMessages,
 		Conversation: conversation,
 		// ConversationState is sent via the streaming endpoint, not on initial load
@@ -671,7 +671,7 @@ func (s *Server) handleChatConversation(w http.ResponseWriter, r *http.Request, 
 	}
 
 	w.WriteHeader(http.StatusAccepted)
-	json.NewEncoder(w).Encode(map[string]string{"status": "accepted"})
+	_ = json.NewEncoder(w).Encode(map[string]string{"status": "accepted"}) //nolint:errchkjson // best-effort HTTP response
 }
 
 // handleNewConversation handles POST /api/conversations/new - creates conversation implicitly on first message
@@ -775,7 +775,7 @@ func (s *Server) handleNewConversation(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{ //nolint:errchkjson // best-effort HTTP response
 		"status":          "accepted",
 		"conversation_id": conversationID,
 	})
@@ -894,7 +894,7 @@ func (s *Server) handleContinueConversation(w http.ResponseWriter, r *http.Reque
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{ //nolint:errchkjson // best-effort HTTP response
 		"status":          "created",
 		"conversation_id": conversationID,
 	})
@@ -984,7 +984,7 @@ func (s *Server) handleCancelConversation(w http.ResponseWriter, r *http.Request
 	if !exists {
 		// No active conversation to cancel
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]string{"status": "no_active_conversation"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"status": "no_active_conversation"}) //nolint:errchkjson // best-effort HTTP response
 		return
 	}
 
@@ -997,7 +997,7 @@ func (s *Server) handleCancelConversation(w http.ResponseWriter, r *http.Request
 
 	s.logger.Info("Conversation cancelled", "conversationID", conversationID)
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"status": "cancelled"})
+	_ = json.NewEncoder(w).Encode(map[string]string{"status": "cancelled"}) //nolint:errchkjson // best-effort HTTP response
 }
 
 // handleStreamConversation handles GET /conversation/<id>/stream
@@ -1085,7 +1085,11 @@ func (s *Server) handleStreamConversation(w http.ResponseWriter, r *http.Request
 			},
 			ContextWindowSize: calculateContextWindowSize(apiMessages),
 		}
-		data, _ := json.Marshal(streamData)
+		data, err := json.Marshal(streamData)
+		if err != nil {
+			s.logger.Error("Failed to marshal stream data", "error", err)
+			return
+		}
 		fmt.Fprintf(w, "data: %s\n\n", data)
 		w.(http.Flusher).Flush()
 	} else {
@@ -1099,7 +1103,11 @@ func (s *Server) handleStreamConversation(w http.ResponseWriter, r *http.Request
 			},
 			Heartbeat: true,
 		}
-		data, _ := json.Marshal(streamData)
+		data, err := json.Marshal(streamData)
+		if err != nil {
+			s.logger.Error("Failed to marshal stream data", "error", err)
+			return
+		}
 		fmt.Fprintf(w, "data: %s\n\n", data)
 		w.(http.Flusher).Flush()
 	}
@@ -1151,7 +1159,10 @@ func (s *Server) handleStreamConversation(w http.ResponseWriter, r *http.Request
 			break
 		}
 		// Always forward updates, even if only the conversation changed (e.g., slug added)
-		data, _ := json.Marshal(streamData)
+		data, err := json.Marshal(streamData)
+		if err != nil {
+			continue
+		}
 		fmt.Fprintf(w, "data: %s\n\n", data)
 		w.(http.Flusher).Flush()
 	}
@@ -1165,7 +1176,7 @@ func (s *Server) handleVersion(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(version.GetInfo())
+	_ = json.NewEncoder(w).Encode(version.GetInfo()) //nolint:errchkjson // best-effort HTTP response
 }
 
 // ModelInfo represents a model in the API response
@@ -1213,7 +1224,7 @@ func (s *Server) handleModels(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(s.getModelList())
+	_ = json.NewEncoder(w).Encode(s.getModelList()) //nolint:errchkjson // best-effort HTTP response
 }
 
 // handleArchivedConversations handles GET /api/conversations/archived
@@ -1257,7 +1268,7 @@ func (s *Server) handleArchivedConversations(w http.ResponseWriter, r *http.Requ
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(conversations)
+	_ = json.NewEncoder(w).Encode(conversations) //nolint:errchkjson // best-effort HTTP response
 }
 
 // handleArchiveConversation handles POST /conversation/<id>/archive
@@ -1282,7 +1293,7 @@ func (s *Server) handleArchiveConversation(w http.ResponseWriter, r *http.Reques
 	})
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(conversation)
+	_ = json.NewEncoder(w).Encode(conversation) //nolint:errchkjson // best-effort HTTP response
 }
 
 // handleUnarchiveConversation handles POST /conversation/<id>/unarchive
@@ -1307,7 +1318,7 @@ func (s *Server) handleUnarchiveConversation(w http.ResponseWriter, r *http.Requ
 	})
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(conversation)
+	_ = json.NewEncoder(w).Encode(conversation) //nolint:errchkjson // best-effort HTTP response
 }
 
 // handleDeleteConversation handles POST /conversation/<id>/delete
@@ -1331,7 +1342,7 @@ func (s *Server) handleDeleteConversation(w http.ResponseWriter, r *http.Request
 	})
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "deleted"})
+	_ = json.NewEncoder(w).Encode(map[string]string{"status": "deleted"}) //nolint:errchkjson // best-effort HTTP response
 }
 
 // handleConversationBySlug handles GET /api/conversation-by-slug/<slug>
@@ -1360,7 +1371,7 @@ func (s *Server) handleConversationBySlug(w http.ResponseWriter, r *http.Request
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(conversation)
+	_ = json.NewEncoder(w).Encode(conversation) //nolint:errchkjson // best-effort HTTP response
 }
 
 // RenameRequest represents a request to rename a conversation
@@ -1404,7 +1415,7 @@ func (s *Server) handleRenameConversation(w http.ResponseWriter, r *http.Request
 	})
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(conversation)
+	_ = json.NewEncoder(w).Encode(conversation) //nolint:errchkjson // best-effort HTTP response
 }
 
 // handleVersionCheck returns version check information including update availability
@@ -1419,7 +1430,7 @@ func (s *Server) handleVersionCheck(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(info)
+	_ = json.NewEncoder(w).Encode(info) //nolint:errchkjson // best-effort HTTP response
 }
 
 // handleVersionChangelog returns the changelog between current and latest versions
@@ -1440,7 +1451,7 @@ func (s *Server) handleVersionChangelog(w http.ResponseWriter, r *http.Request) 
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(commits)
+	_ = json.NewEncoder(w).Encode(commits) //nolint:errchkjson // best-effort HTTP response
 }
 
 // handleUpgrade performs a self-update of the Shelley binary
@@ -1458,7 +1469,7 @@ func (s *Server) handleUpgrade(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	if restart {
-		json.NewEncoder(w).Encode(map[string]string{"status": "ok", "message": "Upgrade complete. Restarting..."})
+		_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok", "message": "Upgrade complete. Restarting..."}) //nolint:errchkjson // best-effort HTTP response
 
 		// Flush the response
 		if f, ok := w.(http.Flusher); ok {
@@ -1472,7 +1483,7 @@ func (s *Server) handleUpgrade(w http.ResponseWriter, r *http.Request) {
 			os.Exit(0)
 		}()
 	} else {
-		json.NewEncoder(w).Encode(map[string]string{"status": "ok", "message": "Upgrade complete. Restart to apply."})
+		_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok", "message": "Upgrade complete. Restart to apply."}) //nolint:errchkjson // best-effort HTTP response
 	}
 }
 
@@ -1480,7 +1491,7 @@ func (s *Server) handleUpgrade(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleExit(w http.ResponseWriter, r *http.Request) {
 	// Send response before exiting
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "ok", "message": "Exiting..."})
+	_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok", "message": "Exiting..."}) //nolint:errchkjson // best-effort HTTP response
 
 	// Flush the response
 	if f, ok := w.(http.Flusher); ok {
@@ -1505,7 +1516,7 @@ func (s *Server) handleGetSettings(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(settings)
+	_ = json.NewEncoder(w).Encode(settings) //nolint:errchkjson // best-effort HTTP response
 }
 
 // handleSetSetting sets a single setting
@@ -1541,5 +1552,5 @@ func (s *Server) handleSetSetting(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+	_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok"}) //nolint:errchkjson // best-effort HTTP response
 }

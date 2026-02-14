@@ -84,7 +84,10 @@ func runServe(global GlobalConfig, args []string) {
 	port := fs.String("port", "9000", "Port to listen on")
 	systemdActivation := fs.Bool("systemd-activation", false, "Use systemd socket activation (listen on fd from systemd)")
 	requireHeader := fs.String("require-header", "", "Require this header on all API requests (e.g., X-Exedev-Userid)")
-	fs.Parse(args)
+	if err := fs.Parse(args); err != nil {
+		fmt.Fprintf(os.Stderr, "Error parsing serve flags: %v\n", err)
+		os.Exit(1)
+	}
 
 	logger := setupLogging(global.Debug)
 
@@ -213,7 +216,10 @@ func runUnpackTemplate(args []string) {
 			}
 		}
 	}
-	fs.Parse(args)
+	if err := fs.Parse(args); err != nil {
+		fmt.Fprintf(os.Stderr, "Error parsing unpack-template flags: %v\n", err)
+		os.Exit(1)
+	}
 
 	if fs.NArg() < 2 {
 		fs.Usage()

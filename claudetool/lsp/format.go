@@ -43,10 +43,6 @@ func formatReferences(locations []Location, wd string) string {
 	}
 
 	// Group by file
-	type fileRef struct {
-		path string
-		refs []Location
-	}
 	fileOrder := []string{}
 	byFile := make(map[string][]Location)
 	for _, loc := range locations {

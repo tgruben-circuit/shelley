@@ -444,7 +444,7 @@ func (s *Server) handleValidateCwd(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Query().Get("path")
 	if path == "" {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{ //nolint:errchkjson // best-effort HTTP response
 			"valid": false,
 			"error": "path is required",
 		})
@@ -455,12 +455,12 @@ func (s *Server) handleValidateCwd(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		if os.IsNotExist(err) {
-			json.NewEncoder(w).Encode(map[string]interface{}{
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{ //nolint:errchkjson // best-effort HTTP response
 				"valid": false,
 				"error": "directory does not exist",
 			})
 		} else {
-			json.NewEncoder(w).Encode(map[string]interface{}{
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{ //nolint:errchkjson // best-effort HTTP response
 				"valid": false,
 				"error": err.Error(),
 			})
@@ -470,7 +470,7 @@ func (s *Server) handleValidateCwd(w http.ResponseWriter, r *http.Request) {
 
 	if !info.IsDir() {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{ //nolint:errchkjson // best-effort HTTP response
 			"valid": false,
 			"error": "path is not a directory",
 		})
@@ -478,7 +478,7 @@ func (s *Server) handleValidateCwd(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{ //nolint:errchkjson // best-effort HTTP response
 		"valid": true,
 	})
 }
@@ -525,15 +525,15 @@ func (s *Server) handleListDirectory(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		if os.IsNotExist(err) {
-			json.NewEncoder(w).Encode(map[string]interface{}{
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{ //nolint:errchkjson // best-effort HTTP response
 				"error": "directory does not exist",
 			})
 		} else if os.IsPermission(err) {
-			json.NewEncoder(w).Encode(map[string]interface{}{
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{ //nolint:errchkjson // best-effort HTTP response
 				"error": "permission denied",
 			})
 		} else {
-			json.NewEncoder(w).Encode(map[string]interface{}{
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{ //nolint:errchkjson // best-effort HTTP response
 				"error": err.Error(),
 			})
 		}
@@ -542,7 +542,7 @@ func (s *Server) handleListDirectory(w http.ResponseWriter, r *http.Request) {
 
 	if !info.IsDir() {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{ //nolint:errchkjson // best-effort HTTP response
 			"error": "path is not a directory",
 		})
 		return
@@ -553,11 +553,11 @@ func (s *Server) handleListDirectory(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		if os.IsPermission(err) {
-			json.NewEncoder(w).Encode(map[string]interface{}{
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{ //nolint:errchkjson // best-effort HTTP response
 				"error": "permission denied",
 			})
 		} else {
-			json.NewEncoder(w).Encode(map[string]interface{}{
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{ //nolint:errchkjson // best-effort HTTP response
 				"error": err.Error(),
 			})
 		}
@@ -618,7 +618,7 @@ func (s *Server) handleListDirectory(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	_ = json.NewEncoder(w).Encode(response) //nolint:errchkjson // best-effort HTTP response
 }
 
 // getGitHeadSubject returns the subject line of HEAD commit for a git repository.
@@ -704,7 +704,7 @@ func (s *Server) handleCreateDirectory(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{ //nolint:errchkjson // best-effort HTTP response
 			"error": "invalid request body",
 		})
 		return
@@ -712,7 +712,7 @@ func (s *Server) handleCreateDirectory(w http.ResponseWriter, r *http.Request) {
 
 	if req.Path == "" {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{ //nolint:errchkjson // best-effort HTTP response
 			"error": "path is required",
 		})
 		return
@@ -724,7 +724,7 @@ func (s *Server) handleCreateDirectory(w http.ResponseWriter, r *http.Request) {
 	// Check if path already exists
 	if _, err := os.Stat(path); err == nil {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{ //nolint:errchkjson // best-effort HTTP response
 			"error": "path already exists",
 		})
 		return
@@ -734,7 +734,7 @@ func (s *Server) handleCreateDirectory(w http.ResponseWriter, r *http.Request) {
 	parentDir := filepath.Dir(path)
 	if _, err := os.Stat(parentDir); os.IsNotExist(err) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{ //nolint:errchkjson // best-effort HTTP response
 			"error": "parent directory does not exist",
 		})
 		return
@@ -744,11 +744,11 @@ func (s *Server) handleCreateDirectory(w http.ResponseWriter, r *http.Request) {
 	if err := os.Mkdir(path, 0o755); err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		if os.IsPermission(err) {
-			json.NewEncoder(w).Encode(map[string]interface{}{
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{ //nolint:errchkjson // best-effort HTTP response
 				"error": "permission denied",
 			})
 		} else {
-			json.NewEncoder(w).Encode(map[string]interface{}{
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{ //nolint:errchkjson // best-effort HTTP response
 				"error": err.Error(),
 			})
 		}
@@ -756,7 +756,7 @@ func (s *Server) handleCreateDirectory(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{ //nolint:errchkjson // best-effort HTTP response
 		"path": path,
 	})
 }

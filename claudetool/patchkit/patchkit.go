@@ -127,7 +127,7 @@ type tok struct {
 
 func (t tok) String() string {
 	if t.lit == "" {
-		return fmt.Sprintf("%s", t.tok)
+		return t.tok.String()
 	}
 	return fmt.Sprintf("%s(%q)", t.tok, t.lit)
 }

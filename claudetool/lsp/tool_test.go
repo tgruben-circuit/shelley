@@ -74,10 +74,8 @@ func TestToolPositionConversion(t *testing.T) {
 	// Test that 1-based input converts to 0-based LSP positions
 	// by checking the input struct parsing
 	input := codeIntelInput{
-		Operation: "definition",
-		File:      "test.go",
-		Line:      10,
-		Column:    5,
+		Line:   10,
+		Column: 5,
 	}
 
 	// 1-based line 10 should become 0-based line 9

@@ -156,7 +156,7 @@ func (s *Server) handleDistillConversation(w http.ResponseWriter, r *http.Reques
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{ //nolint:errchkjson // best-effort HTTP response
 		"status":          "created",
 		"conversation_id": conversationID,
 	})

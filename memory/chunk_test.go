@@ -16,8 +16,8 @@ func TestEstimateTokens(t *testing.T) {
 		want  int
 	}{
 		{"empty", "", 0},
-		{"short", "hello", 2},          // 5 chars / 4 = 1.25 -> 2
-		{"exact multiple", "abcdefgh", 2}, // 8 chars / 4 = 2
+		{"short", "hello", 2},                                   // 5 chars / 4 = 1.25 -> 2
+		{"exact multiple", "abcdefgh", 2},                       // 8 chars / 4 = 2
 		{"longer", "this is a test string with some words", 10}, // 37 chars / 4 = 9.25 -> 10
 	}
 	for _, tt := range tests {

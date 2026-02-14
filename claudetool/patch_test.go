@@ -26,7 +26,10 @@ func TestPatchTool_BasicOperations(t *testing.T) {
 		}},
 	}
 
-	msg, _ := json.Marshal(input)
+	msg, err := json.Marshal(input)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
 	result := patch.Run(ctx, msg)
 	if result.Error != nil {
 		t.Fatalf("overwrite failed: %v", result.Error)
@@ -47,7 +50,10 @@ func TestPatchTool_BasicOperations(t *testing.T) {
 		NewText:   "Patch",
 	}}
 
-	msg, _ = json.Marshal(input)
+	msg, err = json.Marshal(input)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
 	result = patch.Run(ctx, msg)
 	if result.Error != nil {
 		t.Fatalf("replace failed: %v", result.Error)
@@ -64,7 +70,10 @@ func TestPatchTool_BasicOperations(t *testing.T) {
 		NewText:   "Appended line\n",
 	}}
 
-	msg, _ = json.Marshal(input)
+	msg, err = json.Marshal(input)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
 	result = patch.Run(ctx, msg)
 	if result.Error != nil {
 		t.Fatalf("append_eof failed: %v", result.Error)
@@ -82,7 +91,10 @@ func TestPatchTool_BasicOperations(t *testing.T) {
 		NewText:   "Prepended line\n",
 	}}
 
-	msg, _ = json.Marshal(input)
+	msg, err = json.Marshal(input)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
 	result = patch.Run(ctx, msg)
 	if result.Error != nil {
 		t.Fatalf("prepend_bof failed: %v", result.Error)
@@ -111,7 +123,10 @@ func TestPatchTool_ClipboardOperations(t *testing.T) {
 		}},
 	}
 
-	msg, _ := json.Marshal(input)
+	msg, err := json.Marshal(input)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
 	result := patch.Run(ctx, msg)
 	if result.Error != nil {
 		t.Fatalf("initial overwrite failed: %v", result.Error)
@@ -125,7 +140,10 @@ func TestPatchTool_ClipboardOperations(t *testing.T) {
 		ToClipboard: "saved_func",
 	}}
 
-	msg, _ = json.Marshal(input)
+	msg, err = json.Marshal(input)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
 	result = patch.Run(ctx, msg)
 	if result.Error != nil {
 		t.Fatalf("toClipboard failed: %v", result.Error)
@@ -137,7 +155,10 @@ func TestPatchTool_ClipboardOperations(t *testing.T) {
 		FromClipboard: "saved_func",
 	}}
 
-	msg, _ = json.Marshal(input)
+	msg, err = json.Marshal(input)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
 	result = patch.Run(ctx, msg)
 	if result.Error != nil {
 		t.Fatalf("fromClipboard failed: %v", result.Error)
@@ -165,7 +186,10 @@ func TestPatchTool_IndentationAdjustment(t *testing.T) {
 		}},
 	}
 
-	msg, _ := json.Marshal(input)
+	msg, err := json.Marshal(input)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
 	result := patch.Run(ctx, msg)
 	if result.Error != nil {
 		t.Fatalf("initial setup failed: %v", result.Error)
@@ -182,7 +206,10 @@ func TestPatchTool_IndentationAdjustment(t *testing.T) {
 		},
 	}}
 
-	msg, _ = json.Marshal(input)
+	msg, err = json.Marshal(input)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
 	result = patch.Run(ctx, msg)
 	if result.Error != nil {
 		t.Fatalf("indentation adjustment failed: %v", result.Error)
@@ -211,7 +238,10 @@ func TestPatchTool_FuzzyMatching(t *testing.T) {
 		}},
 	}
 
-	msg, _ := json.Marshal(input)
+	msg, err := json.Marshal(input)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
 	result := patch.Run(ctx, msg)
 	if result.Error != nil {
 		t.Fatalf("initial setup failed: %v", result.Error)
@@ -224,7 +254,10 @@ func TestPatchTool_FuzzyMatching(t *testing.T) {
 		NewText:   "if condition {\n\t\tfmt.Println(\"modified\")\n\t}",
 	}}
 
-	msg, _ = json.Marshal(input)
+	msg, err = json.Marshal(input)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
 	result = patch.Run(ctx, msg)
 	if result.Error != nil {
 		t.Fatalf("fuzzy matching failed: %v", result.Error)
@@ -253,7 +286,10 @@ func TestPatchTool_ErrorCases(t *testing.T) {
 		}},
 	}
 
-	msg, _ := json.Marshal(input)
+	msg, err := json.Marshal(input)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
 	result := patch.Run(ctx, msg)
 	if result.Error == nil {
 		t.Error("expected error for replace on non-existent file")
@@ -265,7 +301,10 @@ func TestPatchTool_ErrorCases(t *testing.T) {
 		NewText:   "duplicate\nduplicate\n",
 	}}
 
-	msg, _ = json.Marshal(input)
+	msg, err = json.Marshal(input)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
 	result = patch.Run(ctx, msg)
 	if result.Error != nil {
 		t.Fatalf("failed to create test file: %v", result.Error)
@@ -278,7 +317,10 @@ func TestPatchTool_ErrorCases(t *testing.T) {
 		NewText:   "unique",
 	}}
 
-	msg, _ = json.Marshal(input)
+	msg, err = json.Marshal(input)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
 	result = patch.Run(ctx, msg)
 	if result.Error == nil || !strings.Contains(result.Error.Error(), "not unique") {
 		t.Error("expected non-unique error")
@@ -291,7 +333,10 @@ func TestPatchTool_ErrorCases(t *testing.T) {
 		NewText:   "something",
 	}}
 
-	msg, _ = json.Marshal(input)
+	msg, err = json.Marshal(input)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
 	result = patch.Run(ctx, msg)
 	if result.Error == nil || !strings.Contains(result.Error.Error(), "not found") {
 		t.Error("expected not found error")
@@ -303,7 +348,10 @@ func TestPatchTool_ErrorCases(t *testing.T) {
 		FromClipboard: "nonexistent",
 	}}
 
-	msg, _ = json.Marshal(input)
+	msg, err = json.Marshal(input)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
 	result = patch.Run(ctx, msg)
 	if result.Error == nil || !strings.Contains(result.Error.Error(), "clipboard") {
 		t.Error("expected clipboard error")
@@ -343,7 +391,10 @@ func TestPatchTool_FlexibleInputParsing(t *testing.T) {
 		},
 	}
 
-	msg, _ := json.Marshal(inputOne)
+	msg, err := json.Marshal(inputOne)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
 	result := patch.Run(ctx, msg)
 	if result.Error != nil {
 		t.Fatalf("single patch format failed: %v", result.Error)
@@ -361,7 +412,10 @@ func TestPatchTool_FlexibleInputParsing(t *testing.T) {
 		Patches: patchStr,
 	}
 
-	msg, _ = json.Marshal(inputStr)
+	msg, err = json.Marshal(inputStr)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
 	result = patch.Run(ctx, msg)
 	if result.Error != nil {
 		t.Fatalf("string patch format failed: %v", result.Error)
@@ -389,7 +443,10 @@ func TestPatchTool_AutogeneratedDetection(t *testing.T) {
 		}},
 	}
 
-	msg, _ := json.Marshal(input)
+	msg, err := json.Marshal(input)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
 	result := patch.Run(ctx, msg)
 	if result.Error != nil {
 		t.Fatalf("failed to create generated file: %v", result.Error)
@@ -402,7 +459,10 @@ func TestPatchTool_AutogeneratedDetection(t *testing.T) {
 		NewText:   "func modified() {}",
 	}}
 
-	msg, _ = json.Marshal(input)
+	msg, err = json.Marshal(input)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
 	result = patch.Run(ctx, msg)
 	if result.Error != nil {
 		t.Fatalf("patching generated file failed: %v", result.Error)
@@ -420,6 +480,7 @@ func TestPatchTool_MultiplePatches(t *testing.T) {
 
 	testFile := filepath.Join(tempDir, "multi.go")
 	var msg []byte
+	var err error
 	var result llm.ToolOut
 
 	// Apply multiple patches - first create file, then modify
@@ -431,7 +492,10 @@ func TestPatchTool_MultiplePatches(t *testing.T) {
 		}},
 	}
 
-	msg, _ = json.Marshal(input)
+	msg, err = json.Marshal(input)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
 	result = patch.Run(ctx, msg)
 	if result.Error != nil {
 		t.Fatalf("failed to create initial file: %v", result.Error)
@@ -455,7 +519,10 @@ func TestPatchTool_MultiplePatches(t *testing.T) {
 		},
 	}
 
-	msg, _ = json.Marshal(input)
+	msg, err = json.Marshal(input)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
 	result = patch.Run(ctx, msg)
 	if result.Error != nil {
 		t.Fatalf("multiple patches failed: %v", result.Error)
@@ -487,7 +554,10 @@ func TestPatchTool_CopyRecipe(t *testing.T) {
 		}},
 	}
 
-	msg, _ := json.Marshal(input)
+	msg, err := json.Marshal(input)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
 	result := patch.Run(ctx, msg)
 	if result.Error != nil {
 		t.Fatalf("failed to create file: %v", result.Error)
@@ -502,7 +572,10 @@ func TestPatchTool_CopyRecipe(t *testing.T) {
 		FromClipboard: "copy_test",
 	}}
 
-	msg, _ = json.Marshal(input)
+	msg, err = json.Marshal(input)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
 	result = patch.Run(ctx, msg)
 	if result.Error != nil {
 		t.Fatalf("copy recipe failed: %v", result.Error)
@@ -529,7 +602,10 @@ func TestPatchTool_RelativePaths(t *testing.T) {
 		}},
 	}
 
-	msg, _ := json.Marshal(input)
+	msg, err := json.Marshal(input)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
 	result := patch.Run(ctx, msg)
 	if result.Error != nil {
 		t.Fatalf("relative path failed: %v", result.Error)
@@ -563,7 +639,10 @@ func BenchmarkPatchTool_BasicOperations(b *testing.B) {
 			NewText:   initialContent,
 		}},
 	}
-	msg, _ := json.Marshal(input)
+	msg, err := json.Marshal(input)
+	if err != nil {
+		b.Fatalf("json.Marshal: %v", err)
+	} //nolint:errchkjson // benchmark setup
 	patch.Run(ctx, msg)
 
 	b.ResetTimer()
@@ -575,7 +654,10 @@ func BenchmarkPatchTool_BasicOperations(b *testing.B) {
 			NewText:   "fmt.Printf(\"%d\\n\", i)",
 		}}
 
-		msg, _ := json.Marshal(input)
+		msg, err := json.Marshal(input)
+		if err != nil {
+			b.Fatalf("json.Marshal: %v", err)
+		} //nolint:errchkjson // benchmark
 		result := patch.Run(ctx, msg)
 		if result.Error != nil {
 			b.Fatalf("benchmark failed: %v", result.Error)
@@ -587,7 +669,7 @@ func BenchmarkPatchTool_BasicOperations(b *testing.B) {
 			OldText:   "fmt.Printf(\"%d\\n\", i)",
 			NewText:   "fmt.Println(i)",
 		}}
-		msg, _ = json.Marshal(input)
+		msg, _ = json.Marshal(input) //nolint:errchkjson // benchmark
 		patch.Run(ctx, msg)
 	}
 }
@@ -621,7 +703,10 @@ func TestPatchTool_CallbackFunction(t *testing.T) {
 		}},
 	}
 
-	msg, _ := json.Marshal(input)
+	msg, err := json.Marshal(input)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
 	result := patch.Run(ctx, msg)
 
 	if !callbackCalled {

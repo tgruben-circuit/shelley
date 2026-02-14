@@ -61,7 +61,7 @@ func (d *discord) Send(ctx context.Context, event notifications.Event) error {
 		return fmt.Errorf("send discord webhook: %w", err)
 	}
 	defer resp.Body.Close()
-	io.Copy(io.Discard, resp.Body)
+	_, _ = io.Copy(io.Discard, resp.Body)
 
 	if resp.StatusCode >= 400 {
 		return fmt.Errorf("discord webhook returned %d", resp.StatusCode)

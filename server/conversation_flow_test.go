@@ -40,7 +40,10 @@ func TestMessageQueuedDuringThinking(t *testing.T) {
 		Message: "delay: 2",
 		Model:   "predictable",
 	}
-	chatBody, _ := json.Marshal(chatReq)
+	chatBody, err := json.Marshal(chatReq)
+	if err != nil {
+		t.Fatalf("json.Marshal: %v", err)
+	}
 
 	req := httptest.NewRequest("POST", "/api/conversation/"+conversationID+"/chat", strings.NewReader(string(chatBody)))
 	req.Header.Set("Content-Type", "application/json")
@@ -61,7 +64,10 @@ func TestMessageQueuedDuringThinking(t *testing.T) {
 		Message: "echo: second message while thinking",
 		Model:   "predictable",
 	}
-	secondBody, _ := json.Marshal(secondReq)
+	secondBody, err := json.Marshal(secondReq)
+	if err != nil {
+		t.Fatalf("json.Marshal: %v", err)
+	}
 
 	req2 := httptest.NewRequest("POST", "/api/conversation/"+conversationID+"/chat", strings.NewReader(string(secondBody)))
 	req2.Header.Set("Content-Type", "application/json")
@@ -171,7 +177,10 @@ func TestContextPreservedAfterCancel(t *testing.T) {
 		Message: "echo: initial context message",
 		Model:   "predictable",
 	}
-	chatBody, _ := json.Marshal(chatReq)
+	chatBody, err := json.Marshal(chatReq)
+	if err != nil {
+		t.Fatalf("json.Marshal: %v", err)
+	}
 
 	req := httptest.NewRequest("POST", "/api/conversation/"+conversationID+"/chat", strings.NewReader(string(chatBody)))
 	req.Header.Set("Content-Type", "application/json")
@@ -190,7 +199,10 @@ func TestContextPreservedAfterCancel(t *testing.T) {
 		Message: "bash: sleep 5",
 		Model:   "predictable",
 	}
-	slowBody, _ := json.Marshal(slowReq)
+	slowBody, err := json.Marshal(slowReq)
+	if err != nil {
+		t.Fatalf("json.Marshal: %v", err)
+	}
 
 	req2 := httptest.NewRequest("POST", "/api/conversation/"+conversationID+"/chat", strings.NewReader(string(slowBody)))
 	req2.Header.Set("Content-Type", "application/json")
@@ -224,7 +236,10 @@ func TestContextPreservedAfterCancel(t *testing.T) {
 		Message: "echo: after cancel",
 		Model:   "predictable",
 	}
-	resumeBody, _ := json.Marshal(resumeReq)
+	resumeBody, err := json.Marshal(resumeReq)
+	if err != nil {
+		t.Fatalf("json.Marshal: %v", err)
+	}
 
 	req3 := httptest.NewRequest("POST", "/api/conversation/"+conversationID+"/chat", strings.NewReader(string(resumeBody)))
 	req3.Header.Set("Content-Type", "application/json")

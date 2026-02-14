@@ -196,7 +196,10 @@ func (h *ClaudeTestHarness) NewConversation(msg, cwd string) *ClaudeTestHarness 
 		Model:   "claude",
 		Cwd:     cwd,
 	}
-	chatBody, _ := json.Marshal(chatReq)
+	chatBody, err := json.Marshal(chatReq)
+	if err != nil {
+		h.t.Fatalf("json.Marshal: %v", err)
+	}
 
 	req := httptest.NewRequest("POST", "/api/conversations/new", strings.NewReader(string(chatBody)))
 	req.Header.Set("Content-Type", "application/json")
@@ -240,7 +243,10 @@ func (h *ClaudeTestHarness) Chat(msg string) *ClaudeTestHarness {
 		Message: msg,
 		Model:   "claude",
 	}
-	chatBody, _ := json.Marshal(chatReq)
+	chatBody, err := json.Marshal(chatReq)
+	if err != nil {
+		h.t.Fatalf("json.Marshal: %v", err)
+	}
 
 	req := httptest.NewRequest("POST", "/api/conversation/"+h.convID+"/chat", strings.NewReader(string(chatBody)))
 	req.Header.Set("Content-Type", "application/json")
@@ -256,7 +262,7 @@ func (h *ClaudeTestHarness) Chat(msg string) *ClaudeTestHarness {
 // GetMessagesUnsafe gets messages without locking (internal use only)
 func (h *ClaudeTestHarness) GetMessagesUnsafe() []generated.Message {
 	var messages []generated.Message
-	h.db.Queries(context.Background(), func(q *generated.Queries) error {
+	_ = h.db.Queries(context.Background(), func(q *generated.Queries) error {
 		var qerr error
 		messages, qerr = q.ListMessages(context.Background(), h.convID)
 		return qerr

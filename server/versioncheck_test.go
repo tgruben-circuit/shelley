@@ -152,7 +152,7 @@ func TestVersionCheckerCache(t *testing.T) {
 				"darwin_arm64": "https://example.com/darwin_arm64",
 			},
 		}
-		json.NewEncoder(w).Encode(release)
+		_ = json.NewEncoder(w).Encode(release)
 	}))
 	defer server.Close()
 
@@ -167,17 +167,15 @@ func TestVersionCheckerCache(t *testing.T) {
 	ctx := context.Background()
 
 	// First call - should not use cache
-	_, err := vc.Check(ctx, false)
+	_, _ = vc.Check(ctx, false)
 	// Will fail because we're not actually calling the static site, but that's OK for this test
 	// The important thing is that it tried to fetch
 
 	// Second call immediately after - should use cache if first succeeded
-	_, err = vc.Check(ctx, false)
-	_ = err // Ignore error, we're just testing the cache logic
+	_, _ = vc.Check(ctx, false)
 
 	// Force refresh should bypass cache
-	_, err = vc.Check(ctx, true)
-	_ = err
+	_, _ = vc.Check(ctx, true)
 }
 
 func TestFindDownloadURL(t *testing.T) {

@@ -258,7 +258,10 @@ func (s *PredictableService) makeResponse(text string, inputTokens uint64) *llm.
 func (s *PredictableService) makeBashToolResponse(command string, inputTokens uint64) *llm.Response {
 	// Properly marshal the command to avoid JSON escaping issues
 	toolInputData := map[string]string{"command": command}
-	toolInputBytes, _ := json.Marshal(toolInputData)
+	toolInputBytes, err := json.Marshal(toolInputData)
+	if err != nil {
+		panic(fmt.Sprintf("predictable: failed to marshal bash tool input: %v", err))
+	}
 	toolInput := json.RawMessage(toolInputBytes)
 	responseText := fmt.Sprintf("I'll run the command: %s", command)
 	outputTokens := uint64(len(responseText)/4 + len(toolInputBytes)/4)
@@ -326,7 +329,10 @@ func (s *PredictableService) makePatchToolResponse(filePath string, inputTokens 
 			},
 		},
 	}
-	toolInputBytes, _ := json.Marshal(toolInputData)
+	toolInputBytes, err := json.Marshal(toolInputData)
+	if err != nil {
+		panic(fmt.Sprintf("predictable: failed to marshal patch tool input: %v", err))
+	}
 	toolInput := json.RawMessage(toolInputBytes)
 	responseText := fmt.Sprintf("I'll patch the file: %s", filePath)
 	outputTokens := uint64(len(responseText)/4 + len(toolInputBytes)/4)
@@ -367,7 +373,10 @@ func (s *PredictableService) makePatchToolResponseOverwrite(filePath string, inp
 			},
 		},
 	}
-	toolInputBytes, _ := json.Marshal(toolInputData)
+	toolInputBytes, err := json.Marshal(toolInputData)
+	if err != nil {
+		panic(fmt.Sprintf("predictable: failed to marshal patch overwrite tool input: %v", err))
+	}
 	toolInput := json.RawMessage(toolInputBytes)
 	responseText := fmt.Sprintf("I'll create/overwrite the file: %s", filePath)
 	outputTokens := uint64(len(responseText)/4 + len(toolInputBytes)/4)
@@ -506,7 +515,10 @@ func (s *PredictableService) makeScreenshotToolResponse(selector string, inputTo
 	if selector != "" {
 		toolInputData["selector"] = selector
 	}
-	toolInputBytes, _ := json.Marshal(toolInputData)
+	toolInputBytes, err := json.Marshal(toolInputData)
+	if err != nil {
+		panic(fmt.Sprintf("predictable: failed to marshal screenshot tool input: %v", err))
+	}
 	toolInput := json.RawMessage(toolInputBytes)
 	responseText := "Taking a screenshot..."
 	outputTokens := uint64(len(responseText)/4 + len(toolInputBytes)/4)
@@ -539,7 +551,10 @@ func (s *PredictableService) makeScreenshotToolResponse(selector string, inputTo
 // makeChangeDirToolResponse creates a response that calls the change_dir tool
 func (s *PredictableService) makeChangeDirToolResponse(path string, inputTokens uint64) *llm.Response {
 	toolInputData := map[string]string{"path": path}
-	toolInputBytes, _ := json.Marshal(toolInputData)
+	toolInputBytes, err := json.Marshal(toolInputData)
+	if err != nil {
+		panic(fmt.Sprintf("predictable: failed to marshal changedir tool input: %v", err))
+	}
 	toolInput := json.RawMessage(toolInputBytes)
 	responseText := fmt.Sprintf("I'll change to directory: %s", path)
 	outputTokens := uint64(len(responseText)/4 + len(toolInputBytes)/4)
@@ -574,7 +589,10 @@ func (s *PredictableService) makeSubagentToolResponse(slug, prompt string, input
 		"slug":   slug,
 		"prompt": prompt,
 	}
-	toolInputBytes, _ := json.Marshal(toolInputData)
+	toolInputBytes, err := json.Marshal(toolInputData)
+	if err != nil {
+		panic(fmt.Sprintf("predictable: failed to marshal subagent tool input: %v", err))
+	}
 	toolInput := json.RawMessage(toolInputBytes)
 	responseText := fmt.Sprintf("Delegating to subagent '%s'...", slug)
 	outputTokens := uint64(len(responseText)/4 + len(toolInputBytes)/4)
@@ -607,12 +625,14 @@ func (s *PredictableService) makeSubagentToolResponse(slug, prompt string, input
 // makeToolSmorgasbordResponse creates a response that uses all available tool types
 func (s *PredictableService) makeToolSmorgasbordResponse(inputTokens uint64) *llm.Response {
 	baseNano := time.Now().UnixNano()
-	content := []llm.Content{
-		{Type: llm.ContentTypeText, Text: "Here's a sample of all the tools:"},
-	}
+	content := make([]llm.Content, 0, 10)
+	content = append(content, llm.Content{Type: llm.ContentTypeText, Text: "Here's a sample of all the tools:"})
 
 	// bash tool
-	bashInput, _ := json.Marshal(map[string]string{"command": "echo 'hello from bash'"})
+	bashInput, err := json.Marshal(map[string]string{"command": "echo 'hello from bash'"})
+	if err != nil {
+		panic(fmt.Sprintf("predictable: failed to marshal bash input: %v", err))
+	}
 	content = append(content, llm.Content{
 		ID:        fmt.Sprintf("tool_bash_%d", baseNano%1000),
 		Type:      llm.ContentTypeToolUse,
@@ -627,12 +647,15 @@ func (s *PredictableService) makeToolSmorgasbordResponse(inputTokens uint64) *ll
 	})
 
 	// patch tool
-	patchInput, _ := json.Marshal(map[string]interface{}{
+	patchInput, err := json.Marshal(map[string]interface{}{
 		"path": "/tmp/example.txt",
 		"patches": []map[string]string{
 			{"operation": "replace", "oldText": "foo", "newText": "bar"},
 		},
 	})
+	if err != nil {
+		panic(fmt.Sprintf("predictable: failed to marshal patch input: %v", err))
+	}
 	content = append(content, llm.Content{
 		ID:        fmt.Sprintf("tool_patch_%d", (baseNano+2)%1000),
 		Type:      llm.ContentTypeToolUse,
@@ -641,7 +664,10 @@ func (s *PredictableService) makeToolSmorgasbordResponse(inputTokens uint64) *ll
 	})
 
 	// screenshot tool
-	screenshotInput, _ := json.Marshal(map[string]string{})
+	screenshotInput, err := json.Marshal(map[string]string{})
+	if err != nil {
+		panic(fmt.Sprintf("predictable: failed to marshal screenshot input: %v", err))
+	}
 	content = append(content, llm.Content{
 		ID:        fmt.Sprintf("tool_screenshot_%d", (baseNano+3)%1000),
 		Type:      llm.ContentTypeToolUse,
@@ -650,10 +676,13 @@ func (s *PredictableService) makeToolSmorgasbordResponse(inputTokens uint64) *ll
 	})
 
 	// keyword_search tool
-	keywordInput, _ := json.Marshal(map[string]interface{}{
+	keywordInput, err := json.Marshal(map[string]interface{}{
 		"query":        "find all references",
 		"search_terms": []string{"reference", "example"},
 	})
+	if err != nil {
+		panic(fmt.Sprintf("predictable: failed to marshal keyword input: %v", err))
+	}
 	content = append(content, llm.Content{
 		ID:        fmt.Sprintf("tool_keyword_%d", (baseNano+4)%1000),
 		Type:      llm.ContentTypeToolUse,
@@ -662,7 +691,10 @@ func (s *PredictableService) makeToolSmorgasbordResponse(inputTokens uint64) *ll
 	})
 
 	// browser_navigate tool
-	navigateInput, _ := json.Marshal(map[string]string{"url": "https://example.com"})
+	navigateInput, err := json.Marshal(map[string]string{"url": "https://example.com"})
+	if err != nil {
+		panic(fmt.Sprintf("predictable: failed to marshal navigate input: %v", err))
+	}
 	content = append(content, llm.Content{
 		ID:        fmt.Sprintf("tool_navigate_%d", (baseNano+5)%1000),
 		Type:      llm.ContentTypeToolUse,
@@ -671,7 +703,10 @@ func (s *PredictableService) makeToolSmorgasbordResponse(inputTokens uint64) *ll
 	})
 
 	// browser_eval tool
-	evalInput, _ := json.Marshal(map[string]string{"expression": "document.title"})
+	evalInput, err := json.Marshal(map[string]string{"expression": "document.title"})
+	if err != nil {
+		panic(fmt.Sprintf("predictable: failed to marshal eval input: %v", err))
+	}
 	content = append(content, llm.Content{
 		ID:        fmt.Sprintf("tool_eval_%d", (baseNano+6)%1000),
 		Type:      llm.ContentTypeToolUse,
@@ -680,7 +715,10 @@ func (s *PredictableService) makeToolSmorgasbordResponse(inputTokens uint64) *ll
 	})
 
 	// read_image tool
-	readImageInput, _ := json.Marshal(map[string]string{"path": "/tmp/image.png"})
+	readImageInput, err := json.Marshal(map[string]string{"path": "/tmp/image.png"})
+	if err != nil {
+		panic(fmt.Sprintf("predictable: failed to marshal read_image input: %v", err))
+	}
 	content = append(content, llm.Content{
 		ID:        fmt.Sprintf("tool_readimg_%d", (baseNano+7)%1000),
 		Type:      llm.ContentTypeToolUse,
@@ -689,7 +727,10 @@ func (s *PredictableService) makeToolSmorgasbordResponse(inputTokens uint64) *ll
 	})
 
 	// browser_recent_console_logs tool
-	consoleInput, _ := json.Marshal(map[string]string{})
+	consoleInput, err := json.Marshal(map[string]string{})
+	if err != nil {
+		panic(fmt.Sprintf("predictable: failed to marshal console input: %v", err))
+	}
 	content = append(content, llm.Content{
 		ID:        fmt.Sprintf("tool_console_%d", (baseNano+8)%1000),
 		Type:      llm.ContentTypeToolUse,

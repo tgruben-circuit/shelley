@@ -511,20 +511,20 @@ func (vc *VersionChecker) doSudoUpgrade(binaryData []byte) error {
 	// Copy ownership and permissions from original
 	cmd = exec.Command("sudo", "chown", "--reference="+exePath, newPath)
 	if output, err := cmd.CombinedOutput(); err != nil {
-		exec.Command("sudo", "rm", "-f", newPath).Run()
+		_ = exec.Command("sudo", "rm", "-f", newPath).Run()
 		return fmt.Errorf("failed to set ownership: %w: %s", err, output)
 	}
 
 	cmd = exec.Command("sudo", "chmod", "--reference="+exePath, newPath)
 	if output, err := cmd.CombinedOutput(); err != nil {
-		exec.Command("sudo", "rm", "-f", newPath).Run()
+		_ = exec.Command("sudo", "rm", "-f", newPath).Run()
 		return fmt.Errorf("failed to set permissions: %w: %s", err, output)
 	}
 
 	// Rename old binary to .old (backup)
 	cmd = exec.Command("sudo", "mv", exePath, oldPath)
 	if output, err := cmd.CombinedOutput(); err != nil {
-		exec.Command("sudo", "rm", "-f", newPath).Run()
+		_ = exec.Command("sudo", "rm", "-f", newPath).Run()
 		return fmt.Errorf("failed to backup old binary: %w: %s", err, output)
 	}
 
@@ -532,13 +532,13 @@ func (vc *VersionChecker) doSudoUpgrade(binaryData []byte) error {
 	cmd = exec.Command("sudo", "mv", newPath, exePath)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		// Try to restore the old binary
-		exec.Command("sudo", "mv", oldPath, exePath).Run()
+		_ = exec.Command("sudo", "mv", oldPath, exePath).Run()
 		return fmt.Errorf("failed to install new binary: %w: %s", err, output)
 	}
 
 	// Remove the backup
 	cmd = exec.Command("sudo", "rm", "-f", oldPath)
-	cmd.Run() // Best effort, ignore errors
+	_ = cmd.Run() // Best effort, ignore errors
 
 	return nil
 }

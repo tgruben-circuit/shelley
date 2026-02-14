@@ -1,6 +1,6 @@
 # Shelley Makefile
 
-.PHONY: build build-linux-aarch64 build-linux-x86 test test-go test-e2e ui serve clean help templates
+.PHONY: build build-linux-aarch64 build-linux-x86 test test-go test-e2e ui serve clean help templates lint
 
 # Default target
 all: build
@@ -75,6 +75,14 @@ serve: ui
 	@echo "Starting Shelley..."
 	go run ./cmd/shelley serve
 
+# Run linters
+lint:
+	@if ! command -v golangci-lint >/dev/null 2>&1 || ! golangci-lint version --format short 2>/dev/null | grep -q "^2\."; then \
+		echo "Installing golangci-lint v2..."; \
+		go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.9.0; \
+	fi
+	golangci-lint run --timeout 5m0s
+
 # Clean build artifacts
 clean:
 	@echo "Cleaning..."
@@ -102,6 +110,7 @@ help:
 	@echo "  test-e2e-ui   Open E2E test UI"
 	@echo "  serve         Start Shelley server"
 	@echo "  serve-test    Start Shelley with predictable model"
+	@echo "  lint          Run Go linters (golangci-lint)"
 	@echo "  clean         Clean build artifacts"
 	@echo "  help          Show this help"
 

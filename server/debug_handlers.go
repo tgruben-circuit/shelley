@@ -21,7 +21,7 @@ func (s *Server) handleDebugConversationsPage(w http.ResponseWriter, r *http.Req
 
 	w.Header().Set("Content-Type", "text/html")
 	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
-	io.Copy(w, file)
+	_, _ = io.Copy(w, file)
 }
 
 // handleDebugLLMRequests serves the debug page for LLM requests
@@ -49,7 +49,7 @@ func (s *Server) handleDebugLLMRequestsAPI(w http.ResponseWriter, r *http.Reques
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(requests)
+	_ = json.NewEncoder(w).Encode(requests) //nolint:errchkjson // best-effort HTTP response
 }
 
 // handleDebugLLMRequestBody returns the request body for a specific LLM request

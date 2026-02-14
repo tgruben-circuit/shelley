@@ -96,7 +96,7 @@ func (s *Server) handleListModels(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(apiModels)
+	_ = json.NewEncoder(w).Encode(apiModels) //nolint:errchkjson // best-effort HTTP response
 }
 
 func (s *Server) handleCreateModel(w http.ResponseWriter, r *http.Request) {
@@ -148,7 +148,7 @@ func (s *Server) handleCreateModel(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(toModelAPI(*model))
+	_ = json.NewEncoder(w).Encode(toModelAPI(*model)) //nolint:errchkjson // best-effort HTTP response
 }
 
 func (s *Server) handleCustomModel(w http.ResponseWriter, r *http.Request) {
@@ -196,7 +196,7 @@ func (s *Server) handleGetModel(w http.ResponseWriter, r *http.Request, modelID 
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(toModelAPI(*model))
+	_ = json.NewEncoder(w).Encode(toModelAPI(*model)) //nolint:errchkjson // best-effort HTTP response
 }
 
 func (s *Server) handleUpdateModel(w http.ResponseWriter, r *http.Request, modelID string) {
@@ -245,7 +245,7 @@ func (s *Server) handleUpdateModel(w http.ResponseWriter, r *http.Request, model
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(toModelAPI(*model))
+	_ = json.NewEncoder(w).Encode(toModelAPI(*model)) //nolint:errchkjson // best-effort HTTP response
 }
 
 func (s *Server) handleDeleteModel(w http.ResponseWriter, r *http.Request, modelID string) {
@@ -279,7 +279,7 @@ func (s *Server) handleDuplicateModel(w http.ResponseWriter, r *http.Request, mo
 	// Parse optional overrides
 	var req DuplicateModelRequest
 	if r.Body != nil {
-		json.NewDecoder(r.Body).Decode(&req) // Ignore errors - all fields optional
+		_ = json.NewDecoder(r.Body).Decode(&req) // Ignore errors - all fields optional
 	}
 
 	// Generate new model ID
@@ -314,7 +314,7 @@ func (s *Server) handleDuplicateModel(w http.ResponseWriter, r *http.Request, mo
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(toModelAPI(*model))
+	_ = json.NewEncoder(w).Encode(toModelAPI(*model)) //nolint:errchkjson // best-effort HTTP response
 }
 
 func (s *Server) handleTestModel(w http.ResponseWriter, r *http.Request) {
@@ -400,7 +400,7 @@ func (s *Server) handleTestModel(w http.ResponseWriter, r *http.Request) {
 	response, err := service.Do(ctx, request)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{ //nolint:errchkjson // best-effort HTTP response
 			"success": false,
 			"message": fmt.Sprintf("Test failed: %v", err),
 		})
@@ -410,7 +410,7 @@ func (s *Server) handleTestModel(w http.ResponseWriter, r *http.Request) {
 	// Check if we got a response
 	if len(response.Content) == 0 || response.Content[0].Text == "" {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{ //nolint:errchkjson // best-effort HTTP response
 			"success": false,
 			"message": "Test failed: empty response from model",
 		})
@@ -418,7 +418,7 @@ func (s *Server) handleTestModel(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{ //nolint:errchkjson // best-effort HTTP response
 		"success": true,
 		"message": fmt.Sprintf("Test successful! Response: %s", response.Content[0].Text),
 	})

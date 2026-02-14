@@ -185,7 +185,7 @@ func StringContent(s string) Content {
 // ContentsAttr returns contents as a slog.Attr.
 // It is meant for logging.
 func ContentsAttr(contents []Content) slog.Attr {
-	var contentAttrs []any // slog.Attr
+	contentAttrs := make([]any, 0, len(contents)) // slog.Attr
 	for _, content := range contents {
 		var attrs []any // slog.Attr
 		switch content.Type {

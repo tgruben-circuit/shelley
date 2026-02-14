@@ -14,11 +14,11 @@ import (
 
 // ServerConfig describes how to start an LSP server for a given language.
 type ServerConfig struct {
-	Name       string   // e.g., "gopls", "typescript-language-server"
-	Command    string   // binary name
-	Args       []string // command-line arguments
-	Extensions []string // file extensions this server handles (e.g., ".go", ".ts")
-	InstallHint string  // message shown if the binary is not found
+	Name        string   // e.g., "gopls", "typescript-language-server"
+	Command     string   // binary name
+	Args        []string // command-line arguments
+	Extensions  []string // file extensions this server handles (e.g., ".go", ".ts")
+	InstallHint string   // message shown if the binary is not found
 }
 
 // DefaultServers returns built-in server configurations.
@@ -65,8 +65,8 @@ type Server struct {
 	openFiles map[string]int // URI -> version
 
 	diagMu     sync.RWMutex
-	diagStore  map[string][]Diagnostic    // URI -> latest diagnostics
-	diagNotify map[string]chan struct{}    // URI -> signal channel
+	diagStore  map[string][]Diagnostic  // URI -> latest diagnostics
+	diagNotify map[string]chan struct{} // URI -> signal channel
 }
 
 // NewServer starts an LSP server and initializes it with the given root URI.

@@ -1,0 +1,64 @@
+version: "2"
+
+linters:
+  enable:
+    - bodyclose
+    - errcheck
+    - errchkjson
+    - errname
+    - govet
+    - ineffassign
+    - misspell
+    - prealloc
+    - predeclared
+    - staticcheck
+    - unconvert
+    - unused
+
+  settings:
+    govet:
+      enable-all: true
+      disable:
+        - fieldalignment
+    staticcheck:
+      checks:
+        - all
+        - -ST1000  # package comments
+        - -ST1020  # exported method comment form
+        - -ST1021  # exported type comment form
+        - -QF1003  # tagged switch suggestions
+        - -QF1011  # type omission suggestions
+
+  exclusions:
+    presets:
+      - std-error-handling
+    rules:
+      # Shadow declarations of err/ctx
+      - linters:
+          - govet
+        text: 'shadow: declaration of "err"'
+      - linters:
+          - govet
+        text: 'shadow: declaration of "ctx"'
+      # Unchecked error returns on common close/flush/write operations
+      - linters:
+          - errcheck
+        text: "Error return value of .*(Close|Flush|Remove|RemoveAll|Setenv).*is not checked"
+      - linters:
+          - errcheck
+        text: "Error return value of .*(printf|Printf|Println|Fprintf|Fprintln).*is not checked"
+      - linters:
+          - errcheck
+        text: "Error return value of .*\\.(Write|WriteString|WriteByte|WriteRune).*is not checked"
+    paths:
+      - third_party
+      - builtin
+      - examples
+    generated: lax
+
+formatters:
+  enable:
+    - gofmt
+  settings:
+    gofmt:
+      simplify: true

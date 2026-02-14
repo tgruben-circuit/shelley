@@ -154,7 +154,7 @@ func (s *Server) handleGitDiffs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{ //nolint:errchkjson // best-effort HTTP response
 		"diffs":   diffs,
 		"gitRoot": gitRoot,
 	})
@@ -275,7 +275,7 @@ func (s *Server) handleGitDiffFiles(w http.ResponseWriter, r *http.Request) {
 	})
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(files)
+	_ = json.NewEncoder(w).Encode(files) //nolint:errchkjson // best-effort HTTP response
 }
 
 // handleGitFileDiff returns the old and new content for a file
@@ -347,5 +347,5 @@ func (s *Server) handleGitFileDiff(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(fileDiff)
+	_ = json.NewEncoder(w).Encode(fileDiff) //nolint:errchkjson // best-effort HTTP response
 }

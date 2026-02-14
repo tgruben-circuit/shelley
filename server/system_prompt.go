@@ -274,7 +274,7 @@ func findAllGuidanceFiles(root string) []string {
 	var found []string
 	seen := make(map[string]bool)
 
-	filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if ctx.Err() != nil {
 			return filepath.SkipAll
 		}

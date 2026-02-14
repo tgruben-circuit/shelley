@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
-	"strings"
 )
 
 // hashMessages returns a SHA-256 hex digest of concatenated role+text.
@@ -144,20 +143,4 @@ func (d *DB) IndexFile(ctx context.Context, filePath, fileName, content string, 
 	}
 
 	return d.SetIndexState("file", filePath, hash)
-}
-
-// sourceName returns a display name for a conversation, falling back to
-// a truncation of the first message.
-func sourceName(slug string, messages []MessageText) string {
-	if slug != "" {
-		return slug
-	}
-	if len(messages) > 0 {
-		t := messages[0].Text
-		if len(t) > 60 {
-			t = t[:60]
-		}
-		return strings.TrimSpace(t)
-	}
-	return ""
 }

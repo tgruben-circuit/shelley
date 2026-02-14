@@ -30,13 +30,13 @@ func ResizeImage(data []byte, maxDimension int) (resized []byte, format string, 
 	}
 
 	// Calculate new dimensions preserving aspect ratio
-	newWidth, newHeight := width, height
+	var newWidth, newHeight int
 	if width > height {
 		newWidth = maxDimension
 		newHeight = height * maxDimension / width
 	} else {
-		newHeight = maxDimension
 		newWidth = width * maxDimension / height
+		newHeight = maxDimension
 	}
 
 	// Create resized image
