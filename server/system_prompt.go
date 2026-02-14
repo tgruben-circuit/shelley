@@ -11,6 +11,7 @@ import (
 	"text/template"
 	"time"
 
+	bundledskills "shelley.exe.dev/bundled_skills"
 	"shelley.exe.dev/skills"
 )
 
@@ -330,6 +331,21 @@ func discoverSkills(workingDir, gitRoot string) []skills.Skill {
 		if !seen[s.Path] {
 			foundSkills = append(foundSkills, s)
 			seen[s.Path] = true
+		}
+	}
+
+	// Append bundled skills at lowest priority, skipping any whose name
+	// was already found (user/project skills override bundled ones).
+	seenNames := make(map[string]bool)
+	for _, s := range foundSkills {
+		seenNames[s.Name] = true
+	}
+	if bundled, err := bundledskills.EmbeddedSkills(); err == nil {
+		for _, s := range bundled {
+			if !seenNames[s.Name] {
+				foundSkills = append(foundSkills, s)
+				seenNames[s.Name] = true
+			}
 		}
 	}
 

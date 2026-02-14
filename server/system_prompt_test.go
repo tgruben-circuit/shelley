@@ -139,3 +139,61 @@ func TestSystemPromptIncludesSkillsFromAnyWorkingDir(t *testing.T) {
 		t.Error("system prompt should contain the skill description")
 	}
 }
+
+func TestSystemPromptIncludesBundledSkills(t *testing.T) {
+	// Generate system prompt from a completely empty directory
+	// (no user skills, no project skills)
+	tmpHome := t.TempDir()
+	oldHome := os.Getenv("HOME")
+	os.Setenv("HOME", tmpHome)
+	t.Cleanup(func() { os.Setenv("HOME", oldHome) })
+
+	emptyDir := t.TempDir()
+	prompt, err := GenerateSystemPrompt(emptyDir)
+	if err != nil {
+		t.Fatalf("GenerateSystemPrompt failed: %v", err)
+	}
+
+	// All three bundled skills should appear
+	for _, name := range []string{"claude-code", "opencode", "gemini-cli"} {
+		if !strings.Contains(prompt, name) {
+			t.Errorf("system prompt should contain bundled skill %q", name)
+		}
+	}
+}
+
+func TestUserSkillOverridesBundledSkill(t *testing.T) {
+	// Create a user-level skill with the same name as a bundled one
+	tmpHome := t.TempDir()
+	skillDir := filepath.Join(tmpHome, ".config", "shelley", "claude-code")
+	if err := os.MkdirAll(skillDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	overrideContent := "---\nname: claude-code\ndescription: OVERRIDE_MARKER user override skill.\n---\nCustom content.\n"
+	if err := os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte(overrideContent), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	oldHome := os.Getenv("HOME")
+	os.Setenv("HOME", tmpHome)
+	t.Cleanup(func() { os.Setenv("HOME", oldHome) })
+
+	emptyDir := t.TempDir()
+	prompt, err := GenerateSystemPrompt(emptyDir)
+	if err != nil {
+		t.Fatalf("GenerateSystemPrompt failed: %v", err)
+	}
+
+	// The override description should appear, not the bundled one
+	if !strings.Contains(prompt, "OVERRIDE_MARKER") {
+		t.Error("system prompt should contain the user override skill description")
+	}
+
+	// Other bundled skills should still be present
+	if !strings.Contains(prompt, "opencode") {
+		t.Error("system prompt should still contain non-overridden bundled skills")
+	}
+	if !strings.Contains(prompt, "gemini-cli") {
+		t.Error("system prompt should still contain non-overridden bundled skills")
+	}
+}
