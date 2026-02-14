@@ -279,6 +279,14 @@ class ApiService {
     return response.json();
   }
 
+  async getSkills(): Promise<Array<{ name: string; description: string }>> {
+    const response = await fetch(`${this.baseUrl}/skills`);
+    if (!response.ok) {
+      throw new Error(`Failed to get skills: ${response.statusText}`);
+    }
+    return response.json();
+  }
+
   // Version check APIs
   async checkVersion(forceRefresh = false): Promise<VersionInfo> {
     const url = forceRefresh ? "/version-check?refresh=true" : "/version-check";

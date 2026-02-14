@@ -1554,3 +1554,29 @@ func (s *Server) handleSetSetting(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok"}) //nolint:errchkjson // best-effort HTTP response
 }
+
+// handleSkills returns the list of discovered skills
+func (s *Server) handleSkills(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	cwd, _ := os.Getwd()
+	gitRoot := ""
+	if gi, err := collectGitInfo(cwd); err == nil && gi != nil {
+		gitRoot = gi.Root
+	}
+	found := discoverSkills(cwd, gitRoot)
+
+	type skillInfo struct {
+		Name        string `json:"name"`
+		Description string `json:"description"`
+	}
+	result := make([]skillInfo, len(found))
+	for i, sk := range found {
+		result[i] = skillInfo{Name: sk.Name, Description: sk.Description}
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(result) //nolint:errchkjson // best-effort HTTP response
+}

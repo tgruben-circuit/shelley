@@ -410,11 +410,13 @@ function MessageInput({
   const isDraggingOver = dragCounter > 0;
   // Check if user is typing a shell command (starts with !)
   const isShellMode = message.trimStart().startsWith("!");
+  // Check if user is typing a slash command (starts with /)
+  const isCommandMode = message.trimStart().startsWith("/");
   // Note: injectedText is auto-inserted via useEffect, no manual UI needed
 
   return (
     <div
-      className={`message-input-container ${isDraggingOver ? "drag-over" : ""} ${isShellMode ? "shell-mode" : ""}`}
+      className={`message-input-container ${isDraggingOver ? "drag-over" : ""} ${isShellMode ? "shell-mode" : ""} ${isCommandMode && !isShellMode ? "command-mode" : ""}`}
       onDragOver={handleDragOver}
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
@@ -448,6 +450,20 @@ function MessageInput({
               >
                 <polyline points="4 17 10 11 4 5" />
                 <line x1="12" y1="19" x2="20" y2="19" />
+              </svg>
+            </div>
+          )}
+          {isCommandMode && !isShellMode && (
+            <div className="shell-mode-indicator" title="Slash command">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <line x1="7" y1="20" x2="17" y2="4" />
               </svg>
             </div>
           )}

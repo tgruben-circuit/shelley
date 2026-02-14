@@ -413,6 +413,9 @@ func (s *Server) RegisterRoutes(mux *http.ServeMux) {
 	// Models API (dynamic list refresh)
 	mux.Handle("/api/models", http.HandlerFunc(s.handleModels))
 
+	// Skills API
+	mux.Handle("GET /api/skills", http.HandlerFunc(s.handleSkills))
+
 	// Version endpoints
 	mux.Handle("GET /version", http.HandlerFunc(s.handleVersion))
 	mux.Handle("GET /version-check", http.HandlerFunc(s.handleVersionCheck))

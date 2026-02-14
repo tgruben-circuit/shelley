@@ -653,6 +653,10 @@ function ChatInterface({
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const [terminalInjectedText, setTerminalInjectedText] = useState<string | null>(null);
   const [terminalAutoFocusId, setTerminalAutoFocusId] = useState<string | null>(null);
+  const [skillsPanel, setSkillsPanel] = useState<Array<{
+    name: string;
+    description: string;
+  }> | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
@@ -1030,6 +1034,17 @@ function ChatInterface({
         }
         // Scroll to bottom to show the new terminal
         setTimeout(() => scrollToBottom(), 100);
+      }
+      return;
+    }
+
+    // Handle /skills command
+    if (trimmedMessage === "/skills") {
+      try {
+        const skills = await api.getSkills();
+        setSkillsPanel(skills);
+      } catch {
+        setSkillsPanel([]);
       }
       return;
     }
@@ -1809,6 +1824,60 @@ function ChatInterface({
           input?.focus();
         }}
       />
+
+      {/* Skills Panel */}
+      {skillsPanel !== null && (
+        <div
+          style={{
+            padding: "8px 12px",
+            backgroundColor: "var(--bg-secondary)",
+            borderTop: "1px solid var(--border-color)",
+            fontSize: "13px",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: skillsPanel.length > 0 ? "6px" : 0,
+            }}
+          >
+            <strong>Available Skills</strong>
+            <button
+              onClick={() => setSkillsPanel(null)}
+              style={{
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                color: "var(--text-secondary)",
+                padding: "2px 4px",
+                fontSize: "16px",
+                lineHeight: 1,
+              }}
+              aria-label="Close skills panel"
+            >
+              &times;
+            </button>
+          </div>
+          {skillsPanel.length === 0 ? (
+            <div style={{ color: "var(--text-secondary)" }}>No skills found.</div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+              {skillsPanel.map((skill) => (
+                <div key={skill.name}>
+                  <span style={{ fontWeight: 500 }}>{skill.name}</span>
+                  {skill.description && (
+                    <span style={{ color: "var(--text-secondary)", marginLeft: "8px" }}>
+                      {skill.description}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Unified Status Bar */}
       <div className="status-bar">

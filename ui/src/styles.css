@@ -1898,6 +1898,19 @@ button {
   z-index: 1;
 }
 
+.message-input-container.command-mode .message-input-form {
+  border-color: var(--blue-text);
+}
+
+.message-input-container.command-mode .message-textarea {
+  padding-left: 36px;
+  width: 100%;
+}
+
+.message-input-container.command-mode .shell-mode-indicator {
+  color: var(--blue-text);
+}
+
 .drag-overlay {
   position: absolute;
   inset: 0;
