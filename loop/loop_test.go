@@ -2125,6 +2125,163 @@ func TestMaxTokensTruncationRetryExhausted(t *testing.T) {
 	}
 }
 
+func TestContextWindowWarningAt80Percent(t *testing.T) {
+	// Mock LLM service that returns usage at 85% of context window
+	svc := &contextWindowTestService{
+		contextWindow: 200000,
+		inputTokens:   150000,
+		outputTokens:  20000, // total = 170000, which is 85% of 200000
+	}
+
+	var mu sync.Mutex
+	var recordedMessages []llm.Message
+	recordFunc := func(ctx context.Context, message llm.Message, usage llm.Usage) error {
+		mu.Lock()
+		recordedMessages = append(recordedMessages, message)
+		mu.Unlock()
+		return nil
+	}
+
+	loop := NewLoop(Config{
+		LLM:           svc,
+		History:       []llm.Message{},
+		Tools:         []*llm.Tool{},
+		RecordMessage: recordFunc,
+	})
+
+	loop.QueueUserMessage(llm.Message{
+		Role:    llm.MessageRoleUser,
+		Content: []llm.Content{{Type: llm.ContentTypeText, Text: "test"}},
+	})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	err := loop.ProcessOneTurn(ctx)
+	if err != nil {
+		t.Fatalf("ProcessOneTurn failed: %v", err)
+	}
+
+	mu.Lock()
+	messages := make([]llm.Message, len(recordedMessages))
+	copy(messages, recordedMessages)
+	mu.Unlock()
+
+	// Expect 2 recorded messages: assistant response + context window warning
+	if len(messages) != 2 {
+		t.Fatalf("expected 2 recorded messages, got %d", len(messages))
+	}
+
+	// First: normal assistant response
+	if messages[0].Role != llm.MessageRoleAssistant {
+		t.Errorf("first message should be assistant, got %v", messages[0].Role)
+	}
+	if messages[0].ErrorType != llm.ErrorTypeNone {
+		t.Errorf("first message should have no error type, got %v", messages[0].ErrorType)
+	}
+
+	// Second: context window warning
+	warning := messages[1]
+	if warning.Role != llm.MessageRoleAssistant {
+		t.Errorf("warning should be assistant role, got %v", warning.Role)
+	}
+	if warning.ErrorType != llm.ErrorTypeContextWindow {
+		t.Errorf("warning should have ErrorType=context_window, got %v", warning.ErrorType)
+	}
+	if warning.EndOfTurn {
+		t.Error("warning should have EndOfTurn=false")
+	}
+	if len(warning.Content) != 1 {
+		t.Fatalf("warning should have 1 content item, got %d", len(warning.Content))
+	}
+	if !strings.Contains(warning.Content[0].Text, "85%") {
+		t.Errorf("warning should mention 85%%, got: %s", warning.Content[0].Text)
+	}
+	if !strings.Contains(warning.Content[0].Text, "Context window") {
+		t.Errorf("warning should mention context window, got: %s", warning.Content[0].Text)
+	}
+}
+
+func TestContextWindowNoWarningBelow80Percent(t *testing.T) {
+	// Mock LLM service that returns usage at 50% of context window
+	svc := &contextWindowTestService{
+		contextWindow: 200000,
+		inputTokens:   80000,
+		outputTokens:  20000, // total = 100000, which is 50% of 200000
+	}
+
+	var mu sync.Mutex
+	var recordedMessages []llm.Message
+	recordFunc := func(ctx context.Context, message llm.Message, usage llm.Usage) error {
+		mu.Lock()
+		recordedMessages = append(recordedMessages, message)
+		mu.Unlock()
+		return nil
+	}
+
+	loop := NewLoop(Config{
+		LLM:           svc,
+		History:       []llm.Message{},
+		Tools:         []*llm.Tool{},
+		RecordMessage: recordFunc,
+	})
+
+	loop.QueueUserMessage(llm.Message{
+		Role:    llm.MessageRoleUser,
+		Content: []llm.Content{{Type: llm.ContentTypeText, Text: "test"}},
+	})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	err := loop.ProcessOneTurn(ctx)
+	if err != nil {
+		t.Fatalf("ProcessOneTurn failed: %v", err)
+	}
+
+	mu.Lock()
+	messages := make([]llm.Message, len(recordedMessages))
+	copy(messages, recordedMessages)
+	mu.Unlock()
+
+	// Only the assistant response, no warning
+	if len(messages) != 1 {
+		t.Fatalf("expected 1 recorded message (no warning), got %d", len(messages))
+	}
+	if messages[0].ErrorType != llm.ErrorTypeNone {
+		t.Errorf("should have no error type, got %v", messages[0].ErrorType)
+	}
+}
+
+// contextWindowTestService is a mock LLM service that returns configurable usage for context window tests.
+type contextWindowTestService struct {
+	contextWindow int
+	inputTokens   uint64
+	outputTokens  uint64
+}
+
+func (s *contextWindowTestService) Do(ctx context.Context, req *llm.Request) (*llm.Response, error) {
+	return &llm.Response{
+		Role: llm.MessageRoleAssistant,
+		Content: []llm.Content{
+			{Type: llm.ContentTypeText, Text: "response"},
+		},
+		StopReason: llm.StopReasonEndTurn,
+		Usage: llm.Usage{
+			InputTokens:  s.inputTokens,
+			OutputTokens: s.outputTokens,
+		},
+	}, nil
+}
+
+func (s *contextWindowTestService) TokenContextWindow() int {
+	return s.contextWindow
+}
+
+func (s *contextWindowTestService) MaxImageDimension() int {
+	return 2000
+}
+
 func truncText(msg llm.Message) string {
 	if len(msg.Content) == 0 {
 		return ""

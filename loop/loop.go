@@ -310,6 +310,9 @@ func (l *Loop) processLLMRequest(ctx context.Context) error {
 		l.logger.Error("failed to record assistant message", "error", err)
 	}
 
+	// Check context window usage and warn if nearing limit
+	l.checkContextWindowUsage(ctx, resp.Usage)
+
 	// Handle tool calls if any
 	if resp.StopReason == llm.StopReasonToolUse {
 		l.logger.Debug("handling tool calls", "content_count", len(resp.Content))
@@ -356,6 +359,45 @@ func (l *Loop) checkGitStateChange(ctx context.Context) {
 				"commit", currentState.Commit)
 			l.onGitStateChange(ctx, currentState)
 		}
+	}
+}
+
+// checkContextWindowUsage logs context window usage and records a warning message
+// when usage exceeds 80% of the model's context window.
+func (l *Loop) checkContextWindowUsage(ctx context.Context, usage llm.Usage) {
+	windowSize := l.llm.TokenContextWindow()
+	if windowSize <= 0 {
+		return
+	}
+	used := usage.ContextWindowUsed()
+	pct := float64(used) / float64(windowSize) * 100
+
+	if pct >= 50 {
+		l.logger.Info("context window usage",
+			"used_tokens", used,
+			"window_size", windowSize,
+			"percent", fmt.Sprintf("%.1f%%", pct),
+		)
+	}
+
+	if pct < 80 {
+		return
+	}
+
+	warning := llm.Message{
+		Role: llm.MessageRoleAssistant,
+		Content: []llm.Content{{
+			Type: llm.ContentTypeText,
+			Text: fmt.Sprintf(
+				"Context window is %.0f%% full (%d / %d tokens). Consider distilling this conversation to continue with a fresh context.",
+				pct, used, windowSize,
+			),
+		}},
+		EndOfTurn: false,
+		ErrorType: llm.ErrorTypeContextWindow,
+	}
+	if err := l.recordMessage(ctx, warning, llm.Usage{}); err != nil {
+		l.logger.Error("failed to record context window warning", "error", err)
 	}
 }
 

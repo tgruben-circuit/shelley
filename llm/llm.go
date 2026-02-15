@@ -64,9 +64,10 @@ func EmptySchema() json.RawMessage {
 type ErrorType string
 
 const (
-	ErrorTypeNone       ErrorType = ""            // Not an error
-	ErrorTypeTruncation ErrorType = "truncation"  // Response truncated due to max tokens
-	ErrorTypeLLMRequest ErrorType = "llm_request" // LLM request failed
+	ErrorTypeNone          ErrorType = ""               // Not an error
+	ErrorTypeTruncation    ErrorType = "truncation"     // Response truncated due to max tokens
+	ErrorTypeLLMRequest    ErrorType = "llm_request"    // LLM request failed
+	ErrorTypeContextWindow ErrorType = "context_window" // Context window usage warning
 )
 
 type Request struct {
