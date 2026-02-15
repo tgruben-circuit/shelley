@@ -767,13 +767,18 @@ func (s *Server) handleCreateDirectory(w http.ResponseWriter, r *http.Request) {
 // getOrCreateConversationManager gets an existing conversation manager or creates a new one.
 func (s *Server) getOrCreateConversationManager(ctx context.Context, conversationID string) (*ConversationManager, error) {
 	manager, err, _ := s.conversationGroup.Do(conversationID, func() (*ConversationManager, error) {
+		// Check if already exists (brief lock).
 		s.mu.Lock()
-		defer s.mu.Unlock()
 		if manager, exists := s.activeConversations[conversationID]; exists {
 			manager.Touch()
+			s.mu.Unlock()
 			return manager, nil
 		}
+		s.mu.Unlock()
 
+		// Create and hydrate WITHOUT holding s.mu. Hydrate does DB writes
+		// (createSystemPrompt), and the DB writer conn is also used by
+		// recordMessage which needs s.mu — holding both causes a deadlock.
 		recordMessage := func(ctx context.Context, message llm.Message, usage llm.Usage) error {
 			return s.recordMessage(ctx, conversationID, message, usage)
 		}
@@ -787,7 +792,11 @@ func (s *Server) getOrCreateConversationManager(ctx context.Context, conversatio
 			return nil, err
 		}
 
+		// Store in map (brief lock). Singleflight prevents races.
+		s.mu.Lock()
 		s.activeConversations[conversationID] = manager
+		s.mu.Unlock()
+
 		return manager, nil
 	})
 	if err != nil {
@@ -802,11 +811,12 @@ func (s *Server) getOrCreateConversationManager(ctx context.Context, conversatio
 func (s *Server) getOrCreateSubagentConversationManager(ctx context.Context, conversationID string) (*ConversationManager, error) {
 	manager, err, _ := s.conversationGroup.Do(conversationID, func() (*ConversationManager, error) {
 		s.mu.Lock()
-		defer s.mu.Unlock()
 		if manager, exists := s.activeConversations[conversationID]; exists {
 			manager.Touch()
+			s.mu.Unlock()
 			return manager, nil
 		}
+		s.mu.Unlock()
 
 		recordMessage := func(ctx context.Context, message llm.Message, usage llm.Usage) error {
 			return s.recordMessage(ctx, conversationID, message, usage)
@@ -825,7 +835,10 @@ func (s *Server) getOrCreateSubagentConversationManager(ctx context.Context, con
 			return nil, err
 		}
 
+		s.mu.Lock()
 		s.activeConversations[conversationID] = manager
+		s.mu.Unlock()
+
 		return manager, nil
 	})
 	if err != nil {

@@ -223,9 +223,12 @@ func collectCodebaseInfo(wd string, gitInfo *GitInfo) (*CodebaseInfo, error) {
 		}
 	}
 
-	// Find all guidance files recursively for the directory listing
-	allGuidanceFiles := findAllGuidanceFiles(searchRoot)
-	info.GuidanceFiles = allGuidanceFiles
+	// Find all guidance files recursively for the directory listing.
+	// Only do the recursive walk inside a git repo — without a project root,
+	// the working directory could be "/" or "/tmp" and walking would be unbounded.
+	if gitInfo != nil {
+		info.GuidanceFiles = findAllGuidanceFiles(searchRoot)
+	}
 
 	return info, nil
 }
@@ -319,8 +322,12 @@ func discoverSkills(workingDir, gitRoot string) []skills.Skill {
 	// Discover skills from all directories
 	foundSkills := skills.Discover(dirs)
 
-	// Also discover skills anywhere in the project tree
-	treeSkills := skills.DiscoverInTree(workingDir, gitRoot)
+	// Also discover skills anywhere in the project tree.
+	// Skip when there's no git root — without a project boundary the walk is unbounded.
+	var treeSkills []skills.Skill
+	if gitRoot != "" {
+		treeSkills = skills.DiscoverInTree(workingDir, gitRoot)
+	}
 
 	// Merge, avoiding duplicates by path
 	seen := make(map[string]bool)
