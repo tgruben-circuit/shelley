@@ -237,7 +237,10 @@ func runOrchestrate(global GlobalConfig, args []string) {
 	logger := setupLogging(global.Debug)
 
 	storeDir := filepath.Join(filepath.Dir(global.DBPath), "nats-data")
-	os.MkdirAll(storeDir, 0o755)
+	if err := os.MkdirAll(storeDir, 0o755); err != nil {
+		logger.Error("Failed to create NATS store directory", "path", storeDir, "error", err)
+		os.Exit(1)
+	}
 
 	node, err := cluster.StartNode(context.Background(), cluster.NodeConfig{
 		AgentID:    "orchestrator",
