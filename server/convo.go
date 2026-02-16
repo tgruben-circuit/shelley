@@ -5,10 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/tgruben-circuit/percy/claudetool"
+	"github.com/tgruben-circuit/percy/cluster"
 	"github.com/tgruben-circuit/percy/db"
 	"github.com/tgruben-circuit/percy/db/generated"
 	"github.com/tgruben-circuit/percy/gitstate"
@@ -269,6 +271,27 @@ func (cm *ConversationManager) createSystemPrompt(ctx context.Context) (*generat
 	if systemPrompt == "" {
 		cm.logger.Info("Skipping empty system prompt generation")
 		return nil, nil
+	}
+
+	// Add cluster orchestrator context if workers are connected
+	if cm.toolSetConfig.ClusterNode != nil {
+		if node, ok := cm.toolSetConfig.ClusterNode.(*cluster.Node); ok {
+			agents, _ := node.Registry.List(ctx)
+			if len(agents) > 1 { // more than just self
+				var workerNames []string
+				for _, a := range agents {
+					if a.ID != node.Config.AgentID {
+						workerNames = append(workerNames, fmt.Sprintf("%s (%s)", a.Name, strings.Join(a.Capabilities, ", ")))
+					}
+				}
+				systemPrompt += fmt.Sprintf(
+					"\n\nYou are the orchestrator of a cluster of %d Percy worker agents: %s. "+
+						"Use the dispatch_tasks tool to break large tasks into subtasks for these workers. "+
+						"Each worker has its own LLM and tools. Describe subtasks clearly -- "+
+						"workers only see the task description, not the conversation history.",
+					len(workerNames), strings.Join(workerNames, ", "))
+			}
+		}
 	}
 
 	systemMessage := llm.Message{

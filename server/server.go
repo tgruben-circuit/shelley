@@ -1260,6 +1260,9 @@ func (s *Server) StartWithListener(listener net.Listener) error {
 	// Start cluster worker if in cluster mode
 	s.startClusterWorker()
 
+	// Start cluster monitor (merge pipeline) on orchestrator node
+	s.startClusterMonitor()
+
 	// Add middleware (applied in reverse order: last added = first executed)
 	handler := LoggerMiddleware(s.logger)(mux)
 	cop := http.NewCrossOriginProtection()
