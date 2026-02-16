@@ -2,17 +2,22 @@ package main
 
 import (
 	"context"
+	crypto_rand "crypto/rand"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"log/slog"
 	"net"
 	"os"
+	"os/signal"
+	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 
 	"github.com/tgruben-circuit/percy/claudetool"
 	memtool "github.com/tgruben-circuit/percy/claudetool/memory"
+	"github.com/tgruben-circuit/percy/cluster"
 	"github.com/tgruben-circuit/percy/db"
 	"github.com/tgruben-circuit/percy/memory"
 	"github.com/tgruben-circuit/percy/models"
@@ -50,6 +55,7 @@ func main() {
 		flag.PrintDefaults()
 		fmt.Fprintf(flag.CommandLine.Output(), "\nCommands:\n")
 		fmt.Fprintf(flag.CommandLine.Output(), "  serve [flags]                 Start the web server\n")
+		fmt.Fprintf(flag.CommandLine.Output(), "  orchestrate [flags]           Start cluster orchestrator\n")
 		fmt.Fprintf(flag.CommandLine.Output(), "  unpack-template <name> <dir>  Unpack a project template to a directory\n")
 		fmt.Fprintf(flag.CommandLine.Output(), "  version                       Print version information as JSON\n")
 		fmt.Fprintf(flag.CommandLine.Output(), "\nUse '%s <command> -h' for command-specific help\n", os.Args[0])
@@ -68,6 +74,8 @@ func main() {
 	switch command {
 	case "serve":
 		runServe(global, args[1:])
+	case "orchestrate":
+		runOrchestrate(global, args[1:])
 	case "unpack-template":
 		runUnpackTemplate(args[1:])
 	case "version":
@@ -84,6 +92,9 @@ func runServe(global GlobalConfig, args []string) {
 	port := fs.String("port", "9000", "Port to listen on")
 	systemdActivation := fs.Bool("systemd-activation", false, "Use systemd socket activation (listen on fd from systemd)")
 	requireHeader := fs.String("require-header", "", "Require this header on all API requests (e.g., X-Exedev-Userid)")
+	clusterAddr := fs.String("cluster", "", "NATS cluster address (':PORT' to embed, 'nats://host:port' to connect)")
+	agentName := fs.String("agent-name", "", "Agent name in cluster")
+	capabilities := fs.String("capabilities", "", "Comma-separated agent capabilities")
 	if err := fs.Parse(args); err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing serve flags: %v\n", err)
 		os.Exit(1)
@@ -167,6 +178,30 @@ func runServe(global GlobalConfig, args []string) {
 	// Load notification channels from DB
 	svr.ReloadNotificationChannels()
 
+	if *clusterAddr != "" {
+		cfg := cluster.NodeConfig{
+			AgentID:   generateAgentID(),
+			AgentName: *agentName,
+			Logger:    logger,
+		}
+		if *capabilities != "" {
+			cfg.Capabilities = strings.Split(*capabilities, ",")
+		}
+		if strings.HasPrefix(*clusterAddr, ":") {
+			cfg.ListenAddr = *clusterAddr
+			cfg.StoreDir = filepath.Join(filepath.Dir(global.DBPath), "nats-data")
+		} else {
+			cfg.NATSUrl = *clusterAddr
+		}
+		node, nodeErr := cluster.StartNode(context.Background(), cfg)
+		if nodeErr != nil {
+			logger.Error("Failed to start cluster node", "error", nodeErr)
+			os.Exit(1)
+		}
+		defer node.Stop()
+		logger.Info("Cluster node started", "agent_id", cfg.AgentID, "nats", *clusterAddr)
+	}
+
 	if *systemdActivation {
 		listener, listenerErr := systemdListener()
 		if listenerErr != nil {
@@ -183,6 +218,48 @@ func runServe(global GlobalConfig, args []string) {
 		logger.Error("Server failed", "error", err)
 		os.Exit(1)
 	}
+}
+
+func runOrchestrate(global GlobalConfig, args []string) {
+	fs := flag.NewFlagSet("orchestrate", flag.ExitOnError)
+	clusterAddr := fs.String("cluster", ":4222", "NATS listen address")
+	repo := fs.String("repo", "", "Repository to orchestrate")
+	if err := fs.Parse(args); err != nil {
+		fmt.Fprintf(os.Stderr, "Error parsing orchestrate flags: %v\n", err)
+		os.Exit(1)
+	}
+
+	if *repo == "" {
+		fmt.Fprintf(os.Stderr, "error: --repo is required\n")
+		os.Exit(1)
+	}
+
+	logger := setupLogging(global.Debug)
+
+	storeDir := filepath.Join(filepath.Dir(global.DBPath), "nats-data")
+	os.MkdirAll(storeDir, 0o755)
+
+	node, err := cluster.StartNode(context.Background(), cluster.NodeConfig{
+		AgentID:    "orchestrator",
+		AgentName:  "orchestrator",
+		ListenAddr: *clusterAddr,
+		StoreDir:   storeDir,
+		Logger:     logger,
+	})
+	if err != nil {
+		logger.Error("Failed to start orchestrator", "error", err)
+		os.Exit(1)
+	}
+
+	logger.Info("Orchestrator started", "nats", node.ClientURL(), "repo", *repo)
+
+	// Wait for shutdown signal
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+	<-sigCh
+
+	logger.Info("Shutting down orchestrator")
+	node.Stop()
 }
 
 func setupLogging(debug bool) *slog.Logger {
@@ -383,6 +460,12 @@ func buildLLMConfig(logger *slog.Logger, configPath, terminalURL, defaultModel s
 	}
 
 	return llmCfg
+}
+
+func generateAgentID() string {
+	b := make([]byte, 6)
+	crypto_rand.Read(b)
+	return fmt.Sprintf("agent-%x", b)
 }
 
 // systemdListener returns a net.Listener from systemd socket activation.
