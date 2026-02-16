@@ -2,6 +2,7 @@ package cluster
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/nats-io/nats.go/jetstream"
@@ -436,20 +437,7 @@ func TestGetNonexistent(t *testing.T) {
 // containsAny returns true if s contains any of the given substrings.
 func containsAny(s string, subs ...string) bool {
 	for _, sub := range subs {
-		if len(sub) > 0 && contains(s, sub) {
-			return true
-		}
-	}
-	return false
-}
-
-func contains(s, sub string) bool {
-	return len(s) >= len(sub) && searchString(s, sub)
-}
-
-func searchString(s, sub string) bool {
-	for i := 0; i <= len(s)-len(sub); i++ {
-		if s[i:i+len(sub)] == sub {
+		if sub != "" && strings.Contains(s, sub) {
 			return true
 		}
 	}

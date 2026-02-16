@@ -2,7 +2,7 @@ package cluster
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"time"
 )
 
@@ -11,7 +11,7 @@ import (
 func FindStaleAgents(ctx context.Context, reg *AgentRegistry, maxAge time.Duration) []AgentCard {
 	agents, err := reg.List(ctx)
 	if err != nil {
-		log.Printf("find stale agents: list: %v", err)
+		slog.Error("find stale agents: list", "error", err)
 		return nil
 	}
 
@@ -35,7 +35,7 @@ func MarkStaleAgentsOffline(ctx context.Context, reg *AgentRegistry, maxAge time
 	var marked []AgentCard
 	for _, a := range stale {
 		if err := reg.UpdateStatus(ctx, a.ID, AgentStatusOffline, ""); err != nil {
-			log.Printf("mark stale agent %q offline: %v", a.ID, err)
+			slog.Error("mark stale agent offline", "agent", a.ID, "error", err)
 			continue
 		}
 		marked = append(marked, a)
