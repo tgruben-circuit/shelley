@@ -983,6 +983,20 @@ func (s *Server) recordMessage(ctx context.Context, conversationID string, messa
 	return nil
 }
 
+// recordMessageForConversation records a message for a specific conversation.
+// This is a direct method on Server, unlike the recordMessage closure created
+// per-conversation in getOrCreateConversationManager. Used by the cluster worker
+// to insert messages (e.g. system prompts) before a ConversationManager exists.
+func (s *Server) recordMessageForConversation(ctx context.Context, conversationID string, msg llm.Message, usage llm.Usage, msgType db.MessageType) error {
+	_, err := s.db.CreateMessage(ctx, db.CreateMessageParams{
+		ConversationID: conversationID,
+		Type:           msgType,
+		LLMData:        msg,
+		UsageData:      usage,
+	})
+	return err
+}
+
 // getMessageType determines the message type from an LLM message
 func (s *Server) getMessageType(message llm.Message) (db.MessageType, error) {
 	// System-generated errors are stored as error type
@@ -1237,6 +1251,9 @@ func (s *Server) StartWithListener(listener net.Listener) error {
 	// Set up HTTP server with routes and middleware
 	mux := http.NewServeMux()
 	s.RegisterRoutes(mux)
+
+	// Start cluster worker if in cluster mode
+	s.startClusterWorker()
 
 	// Add middleware (applied in reverse order: last added = first executed)
 	handler := LoggerMiddleware(s.logger)(mux)
