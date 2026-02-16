@@ -2,8 +2,11 @@ package memory
 
 import (
 	"context"
+	"encoding/json"
 	"path/filepath"
 	"testing"
+
+	"github.com/tgruben-circuit/percy/llm"
 )
 
 func TestIntegrationFullFlow(t *testing.T) {
@@ -115,5 +118,119 @@ We use PostgreSQL for persistent storage with connection pooling.
 	t.Logf("search 'database schema' returned %d results", len(dbResults))
 	for _, r := range dbResults {
 		t.Logf("  type=%s source_type=%s source_name=%s score=%.4f", r.ResultType, r.SourceType, r.SourceName, r.Score)
+	}
+}
+
+// mockLLMForIntegration is a mock LLM service that returns pre-configured responses.
+type mockLLMForIntegration struct {
+	responses []string
+	callCount int
+}
+
+func (m *mockLLMForIntegration) Do(_ context.Context, _ *llm.Request) (*llm.Response, error) {
+	resp := m.responses[m.callCount%len(m.responses)]
+	m.callCount++
+	return &llm.Response{
+		Content: []llm.Content{{Type: llm.ContentTypeText, Text: resp}},
+	}, nil
+}
+func (m *mockLLMForIntegration) TokenContextWindow() int { return 128000 }
+func (m *mockLLMForIntegration) MaxImageDimension() int  { return 0 }
+
+func TestFullMemoryPipeline(t *testing.T) {
+	dir := t.TempDir()
+	mdb, err := Open(filepath.Join(dir, "memory.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mdb.Close()
+	ctx := context.Background()
+
+	// Mock LLM returns extraction results.
+	extractResp, _ := json.Marshal([]ExtractedCell{
+		{CellType: "decision", Salience: 0.9, Content: "Auth uses JWT with RS256", TopicHint: "authentication"},
+		{CellType: "code_ref", Salience: 0.7, Content: "server/auth.go handles JWT middleware", TopicHint: "authentication"},
+		{CellType: "fact", Salience: 0.6, Content: "UI built with React and TypeScript", TopicHint: "frontend"},
+	})
+	svc := &mockLLMForIntegration{responses: []string{string(extractResp)}}
+
+	// Step 1: Index a conversation with LLM extraction.
+	messages := []MessageText{
+		{Role: "user", Text: "Implement JWT auth"},
+		{Role: "assistant", Text: "Done — JWT with RS256 in server/auth.go. UI updated with React."},
+	}
+	err = mdb.IndexConversation(ctx, "conv_1", "auth-impl", messages, nil, svc)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Step 2: Verify cells are searchable.
+	results, err := mdb.TwoTierSearch("JWT", nil, "", 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(results) == 0 {
+		t.Fatal("expected search results after indexing")
+	}
+	t.Logf("search returned %d results", len(results))
+	for _, r := range results {
+		t.Logf("  type=%s topic=%s cell_type=%s content=%s", r.ResultType, r.TopicName, r.CellType, r.Content)
+	}
+
+	// Step 3: Verify topics were created.
+	topics, err := mdb.AllTopics()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(topics) < 2 {
+		t.Errorf("expected at least 2 topics (auth + frontend), got %d", len(topics))
+	}
+	t.Logf("topics created: %d", len(topics))
+	for _, topic := range topics {
+		t.Logf("  topic=%s name=%s cells=%d", topic.TopicID, topic.Name, topic.CellCount)
+	}
+
+	// Step 4: Re-indexing with same content should be a no-op.
+	callsBefore := svc.callCount
+	err = mdb.IndexConversation(ctx, "conv_1", "auth-impl", messages, nil, svc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if svc.callCount != callsBefore {
+		t.Error("re-indexing unchanged conversation should not make LLM calls")
+	}
+
+	// Step 5: Index a file and verify it's searchable.
+	err = mdb.IndexFile(ctx, "/docs/README.md", "README.md", "# Auth\n\nJWT tokens for API access.\n", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fileResults, err := mdb.TwoTierSearch("JWT tokens", nil, "file", 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(fileResults) == 0 {
+		t.Fatal("expected file results")
+	}
+
+	// Step 6: Verify cross-type search returns both sources.
+	allResults, err := mdb.TwoTierSearch("JWT", nil, "", 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	hasConv, hasFile := false, false
+	for _, r := range allResults {
+		if r.SourceType == "conversation" {
+			hasConv = true
+		}
+		if r.SourceType == "file" {
+			hasFile = true
+		}
+	}
+	if !hasConv {
+		t.Error("expected conversation results in cross-type search")
+	}
+	if !hasFile {
+		t.Error("expected file results in cross-type search")
 	}
 }
