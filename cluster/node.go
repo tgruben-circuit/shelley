@@ -113,6 +113,9 @@ func StartNode(ctx context.Context, cfg NodeConfig) (*Node, error) {
 	return n, nil
 }
 
+// NC returns the underlying NATS connection.
+func (n *Node) NC() *nats.Conn { return n.nc }
+
 // ClientURL returns the NATS URL that clients should use to connect.
 func (n *Node) ClientURL() string {
 	if n.embedded != nil {

@@ -297,6 +297,10 @@ func (q *TaskQueue) setResult(ctx context.Context, taskID string, status TaskSta
 		return fmt.Errorf("%s update task %q: %w", status, taskID, err)
 	}
 
+	if err := q.nc.Publish(fmt.Sprintf("task.%s.status", task.ID), data); err != nil {
+		return fmt.Errorf("%s publish task %q status: %w", status, taskID, err)
+	}
+
 	return nil
 }
 
