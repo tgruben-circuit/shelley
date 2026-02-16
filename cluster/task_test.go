@@ -434,6 +434,110 @@ func TestGetNonexistent(t *testing.T) {
 	}
 }
 
+func TestSetWorking(t *testing.T) {
+	tq, ctx := setupTestTaskQueue(t)
+
+	task := Task{
+		ID:        "task-1",
+		Type:      TaskTypeImplement,
+		Priority:  1,
+		CreatedBy: "agent-a",
+		Title:     "Working test",
+		Context:   TaskContext{Repo: "percy", BaseBranch: "main"},
+	}
+	if err := tq.Submit(ctx, task); err != nil {
+		t.Fatalf("Submit: %v", err)
+	}
+	if err := tq.Claim(ctx, "task-1", "agent-b"); err != nil {
+		t.Fatalf("Claim: %v", err)
+	}
+
+	if err := tq.SetWorking(ctx, "task-1"); err != nil {
+		t.Fatalf("SetWorking: %v", err)
+	}
+
+	got, err := tq.Get(ctx, "task-1")
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+
+	if got.Status != TaskStatusWorking {
+		t.Errorf("Status: got %q, want %q", got.Status, TaskStatusWorking)
+	}
+	if got.AssignedTo != "agent-b" {
+		t.Errorf("AssignedTo: got %q, want %q", got.AssignedTo, "agent-b")
+	}
+}
+
+func TestSetWorkingRejectsNonAssigned(t *testing.T) {
+	tq, ctx := setupTestTaskQueue(t)
+
+	task := Task{
+		ID:        "task-1",
+		Type:      TaskTypeImplement,
+		Priority:  1,
+		CreatedBy: "agent-a",
+		Title:     "Reject test",
+		Context:   TaskContext{Repo: "percy", BaseBranch: "main"},
+	}
+	if err := tq.Submit(ctx, task); err != nil {
+		t.Fatalf("Submit: %v", err)
+	}
+
+	// Task is in submitted state (not claimed), SetWorking should fail.
+	err := tq.SetWorking(ctx, "task-1")
+	if err == nil {
+		t.Fatal("SetWorking on submitted task: expected error, got nil")
+	}
+	if !strings.Contains(err.Error(), "submitted") {
+		t.Errorf("SetWorking error should mention current status: %v", err)
+	}
+}
+
+func TestRequeue(t *testing.T) {
+	tq, ctx := setupTestTaskQueue(t)
+
+	task := Task{
+		ID:        "task-1",
+		Type:      TaskTypeImplement,
+		Priority:  1,
+		CreatedBy: "agent-a",
+		Title:     "Requeue test",
+		Context:   TaskContext{Repo: "percy", BaseBranch: "main"},
+	}
+	if err := tq.Submit(ctx, task); err != nil {
+		t.Fatalf("Submit: %v", err)
+	}
+	if err := tq.Claim(ctx, "task-1", "agent-b"); err != nil {
+		t.Fatalf("Claim: %v", err)
+	}
+	if err := tq.SetWorking(ctx, "task-1"); err != nil {
+		t.Fatalf("SetWorking: %v", err)
+	}
+	if err := tq.Fail(ctx, "task-1", TaskResult{Summary: "crashed"}); err != nil {
+		t.Fatalf("Fail: %v", err)
+	}
+
+	if err := tq.Requeue(ctx, "task-1"); err != nil {
+		t.Fatalf("Requeue: %v", err)
+	}
+
+	got, err := tq.Get(ctx, "task-1")
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+
+	if got.Status != TaskStatusSubmitted {
+		t.Errorf("Status: got %q, want %q", got.Status, TaskStatusSubmitted)
+	}
+	if got.Retries != 1 {
+		t.Errorf("Retries: got %d, want 1", got.Retries)
+	}
+	if got.AssignedTo != "" {
+		t.Errorf("AssignedTo: got %q, want empty", got.AssignedTo)
+	}
+}
+
 // containsAny returns true if s contains any of the given substrings.
 func containsAny(s string, subs ...string) bool {
 	for _, sub := range subs {

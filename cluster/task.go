@@ -62,6 +62,7 @@ type Task struct {
 	Description    string      `json:"description,omitempty"`
 	Context        TaskContext `json:"context"`
 	Result         TaskResult `json:"result,omitempty"`
+	Retries        int         `json:"retries"`
 	CreatedAt      time.Time   `json:"created_at"`
 	UpdatedAt      time.Time   `json:"updated_at"`
 }
@@ -184,6 +185,86 @@ func (q *TaskQueue) Complete(ctx context.Context, taskID string, result TaskResu
 // Fail marks a task as failed and stores the result.
 func (q *TaskQueue) Fail(ctx context.Context, taskID string, result TaskResult) error {
 	return q.setResult(ctx, taskID, TaskStatusFailed, result)
+}
+
+// SetWorking transitions a task from assigned to working. It verifies the task
+// is currently assigned and uses CAS to prevent races.
+func (q *TaskQueue) SetWorking(ctx context.Context, taskID string) error {
+	kv, err := q.taskKV(ctx)
+	if err != nil {
+		return err
+	}
+
+	entry, err := kv.Get(ctx, taskID)
+	if err != nil {
+		return fmt.Errorf("set working get task %q: %w", taskID, err)
+	}
+
+	var task Task
+	if err := json.Unmarshal(entry.Value(), &task); err != nil {
+		return fmt.Errorf("set working unmarshal task %q: %w", taskID, err)
+	}
+
+	if task.Status != TaskStatusAssigned {
+		return fmt.Errorf("set working task %q: status is %q, want %q", taskID, task.Status, TaskStatusAssigned)
+	}
+
+	task.Status = TaskStatusWorking
+	task.UpdatedAt = time.Now()
+
+	data, err := json.Marshal(task)
+	if err != nil {
+		return fmt.Errorf("set working marshal task %q: %w", taskID, err)
+	}
+
+	if _, err := kv.Update(ctx, taskID, data, entry.Revision()); err != nil {
+		return fmt.Errorf("set working update task %q: %w", taskID, err)
+	}
+
+	if err := q.nc.Publish(fmt.Sprintf("task.%s.status", task.ID), data); err != nil {
+		return fmt.Errorf("set working publish task %q status: %w", taskID, err)
+	}
+
+	return nil
+}
+
+// Requeue moves a task back to submitted status. It clears the AssignedTo field
+// and increments Retries, using CAS to prevent races.
+func (q *TaskQueue) Requeue(ctx context.Context, taskID string) error {
+	kv, err := q.taskKV(ctx)
+	if err != nil {
+		return err
+	}
+
+	entry, err := kv.Get(ctx, taskID)
+	if err != nil {
+		return fmt.Errorf("requeue get task %q: %w", taskID, err)
+	}
+
+	var task Task
+	if err := json.Unmarshal(entry.Value(), &task); err != nil {
+		return fmt.Errorf("requeue unmarshal task %q: %w", taskID, err)
+	}
+
+	task.Status = TaskStatusSubmitted
+	task.AssignedTo = ""
+	task.Retries++
+	task.UpdatedAt = time.Now()
+
+	data, err := json.Marshal(task)
+	if err != nil {
+		return fmt.Errorf("requeue marshal task %q: %w", taskID, err)
+	}
+
+	if _, err := kv.Update(ctx, taskID, data, entry.Revision()); err != nil {
+		return fmt.Errorf("requeue update task %q: %w", taskID, err)
+	}
+
+	if err := q.nc.Publish(fmt.Sprintf("task.%s.status", task.ID), data); err != nil {
+		return fmt.Errorf("requeue publish task %q status: %w", taskID, err)
+	}
+
+	return nil
 }
 
 // setResult updates a task's status and result.
