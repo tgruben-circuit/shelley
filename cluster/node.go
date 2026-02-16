@@ -116,6 +116,9 @@ func StartNode(ctx context.Context, cfg NodeConfig) (*Node, error) {
 // NC returns the underlying NATS connection.
 func (n *Node) NC() *nats.Conn { return n.nc }
 
+// IsOrchestrator returns true if this node is running an embedded NATS server.
+func (n *Node) IsOrchestrator() bool { return n.embedded != nil }
+
 // ClientURL returns the NATS URL that clients should use to connect.
 func (n *Node) ClientURL() string {
 	if n.embedded != nil {

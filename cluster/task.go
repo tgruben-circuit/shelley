@@ -44,8 +44,10 @@ type TaskContext struct {
 
 // TaskResult holds the outcome of a completed or failed task.
 type TaskResult struct {
-	Branch  string `json:"branch"`
-	Summary string `json:"summary"`
+	Branch      string `json:"branch"`
+	Summary     string `json:"summary"`
+	MergeStatus string `json:"merge_status,omitempty"`
+	MergeCommit string `json:"merge_commit,omitempty"`
 }
 
 // Task represents a unit of work in the Percy cluster.

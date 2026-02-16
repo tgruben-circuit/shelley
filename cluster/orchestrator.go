@@ -19,9 +19,20 @@ type TaskPlan struct {
 // Orchestrator manages a task plan with dependency tracking. It submits
 // tasks to the node's TaskQueue as their dependencies are satisfied.
 type Orchestrator struct {
-	node      *Node
-	plan      *TaskPlan
-	submitted map[string]bool // task IDs already submitted to the queue
+	node          *Node
+	plan          *TaskPlan
+	submitted     map[string]bool // task IDs already submitted to the queue
+	workingBranch string
+}
+
+// SetWorkingBranch records the branch that worker branches merge into.
+func (o *Orchestrator) SetWorkingBranch(branch string) {
+	o.workingBranch = branch
+}
+
+// WorkingBranch returns the configured working branch.
+func (o *Orchestrator) WorkingBranch() string {
+	return o.workingBranch
 }
 
 // NewOrchestrator creates an Orchestrator tied to the given cluster node.
