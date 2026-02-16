@@ -467,27 +467,31 @@ func (s *Server) handleClusterStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := r.Context()
-	agents, err := s.clusterNode.Registry.List(ctx)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+	agents, _ := s.clusterNode.Registry.List(ctx)
+
+	var allTasks []cluster.Task
+	for _, st := range []cluster.TaskStatus{
+		cluster.TaskStatusSubmitted, cluster.TaskStatusAssigned,
+		cluster.TaskStatusWorking, cluster.TaskStatusCompleted,
+		cluster.TaskStatusFailed,
+	} {
+		tasks, _ := s.clusterNode.Tasks.ListByStatus(ctx, st)
+		allTasks = append(allTasks, tasks...)
 	}
 
-	submitted, _ := s.clusterNode.Tasks.ListByStatus(ctx, cluster.TaskStatusSubmitted)
-	working, _ := s.clusterNode.Tasks.ListByStatus(ctx, cluster.TaskStatusWorking)
-	completed, _ := s.clusterNode.Tasks.ListByStatus(ctx, cluster.TaskStatusCompleted)
+	summary := map[string]int{"total": len(allTasks)}
+	for _, t := range allTasks {
+		summary[string(t.Status)]++
+	}
 
-	status := map[string]any{
-		"agents": agents,
-		"tasks": map[string]any{
-			"submitted": len(submitted),
-			"working":   len(working),
-			"completed": len(completed),
-		},
+	resp := map[string]any{
+		"agents":       agents,
+		"tasks":        allTasks,
+		"plan_summary": summary,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(status)
+	json.NewEncoder(w).Encode(resp)
 }
 
 // handleValidateCwd validates that a path exists and is a directory
