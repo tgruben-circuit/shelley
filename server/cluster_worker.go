@@ -25,7 +25,12 @@ func (s *Server) startClusterWorker() {
 	}
 
 	worker := cluster.NewWorker(s.clusterNode, handler)
-	go worker.Run(context.Background())
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		<-s.shutdownCh
+		cancel()
+	}()
+	go worker.Run(ctx)
 	s.logger.Info("Cluster worker started", "agent", s.clusterNode.Config.AgentID)
 }
 

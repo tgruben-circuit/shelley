@@ -62,6 +62,7 @@ type Task struct {
 	Description    string      `json:"description,omitempty"`
 	Context        TaskContext `json:"context"`
 	Result         TaskResult `json:"result,omitempty"`
+	DependsOn      []string    `json:"depends_on,omitempty"`
 	Retries        int         `json:"retries"`
 	CreatedAt      time.Time   `json:"created_at"`
 	UpdatedAt      time.Time   `json:"updated_at"`
@@ -244,6 +245,10 @@ func (q *TaskQueue) Requeue(ctx context.Context, taskID string) error {
 	var task Task
 	if err := json.Unmarshal(entry.Value(), &task); err != nil {
 		return fmt.Errorf("requeue unmarshal task %q: %w", taskID, err)
+	}
+
+	if task.Status != TaskStatusAssigned && task.Status != TaskStatusWorking && task.Status != TaskStatusFailed {
+		return fmt.Errorf("requeue task %q: status is %q, expected assigned/working/failed", taskID, task.Status)
 	}
 
 	task.Status = TaskStatusSubmitted

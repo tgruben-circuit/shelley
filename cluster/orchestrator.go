@@ -40,7 +40,9 @@ func (o *Orchestrator) SubmitPlan(ctx context.Context, plan TaskPlan) error {
 
 	for _, pt := range plan.Tasks {
 		if len(pt.DependsOn) == 0 {
-			if err := o.submitTask(ctx, pt.Task); err != nil {
+			task := pt.Task
+			task.DependsOn = pt.DependsOn
+			if err := o.submitTask(ctx, task); err != nil {
 				return fmt.Errorf("submit plan: %w", err)
 			}
 		}
@@ -74,10 +76,12 @@ func (o *Orchestrator) ResolveDependencies(ctx context.Context) ([]Task, error) 
 			continue // not all deps satisfied
 		}
 
-		if err := o.submitTask(ctx, pt.Task); err != nil {
+		task := pt.Task
+		task.DependsOn = pt.DependsOn
+		if err := o.submitTask(ctx, task); err != nil {
 			return nil, fmt.Errorf("resolve dependencies: %w", err)
 		}
-		unblocked = append(unblocked, pt.Task)
+		unblocked = append(unblocked, task)
 	}
 	return unblocked, nil
 }
