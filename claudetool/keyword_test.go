@@ -82,11 +82,16 @@ func TestKeywordTool_Tool(t *testing.T) {
 }
 
 func TestFindRepoRoot(t *testing.T) {
-	// Create a temp directory structure
-	tmpDir := t.TempDir()
+	// Create a temp directory structure.
+	// Resolve symlinks so the path matches git rev-parse output
+	// (on macOS /var is a symlink to /private/var).
+	tmpDir, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Test when not in a git repo (should fail)
-	_, err := FindRepoRoot(tmpDir)
+	_, err = FindRepoRoot(tmpDir)
 	if err == nil {
 		t.Error("expected error when not in git repo")
 	}
