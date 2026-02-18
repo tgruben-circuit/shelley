@@ -63,12 +63,13 @@ func TestTokenContextWindow(t *testing.T) {
 		model string
 		want  int
 	}{
-		{"default model", "", 200000},
+		{"default model", "", 1000000},
 		{"Claude37Sonnet", Claude37Sonnet, 200000},
-		{"Claude4Sonnet", Claude4Sonnet, 200000},
-		{"Claude45Sonnet", Claude45Sonnet, 200000},
+		{"Claude4Sonnet", Claude4Sonnet, 1000000},
+		{"Claude45Sonnet", Claude45Sonnet, 1000000},
 		{"Claude45Haiku", Claude45Haiku, 200000},
 		{"Claude45Opus", Claude45Opus, 200000},
+		{"Claude46Opus", Claude46Opus, 1000000},
 		{"unknown model", "unknown-model", 200000},
 	}
 

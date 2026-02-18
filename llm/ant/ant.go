@@ -62,11 +62,13 @@ func (s *Service) TokenContextWindow() int {
 	}
 
 	switch model {
-	case Claude37Sonnet, Claude4Sonnet, Claude45Sonnet:
+	case Claude46Opus, Claude45Sonnet, Claude4Sonnet:
+		return 1000000
+	case Claude37Sonnet:
 		return 200000
 	case Claude45Haiku:
 		return 200000
-	case Claude45Opus, Claude46Opus:
+	case Claude45Opus:
 		return 200000
 	default:
 		// Default for unknown models
