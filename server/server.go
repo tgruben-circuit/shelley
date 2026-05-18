@@ -519,6 +519,9 @@ func (s *Server) RegisterRoutes(mux *http.ServeMux) {
 	mux.Handle("GET /debug/llm_requests/{id}/request_full", http.HandlerFunc(s.handleDebugLLMRequestBodyFull))
 	mux.Handle("GET /debug/llm_requests/{id}/response", http.HandlerFunc(s.handleDebugLLMResponseBody))
 
+	// A2A (Agent-to-Agent) endpoints — mounted only when PERCY_A2A_TOKEN is set.
+	s.MountA2A(mux)
+
 	// Serve embedded UI assets
 	mux.Handle("/", s.staticHandler(ui.Assets()))
 }
