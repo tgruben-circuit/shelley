@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tgruben-circuit/percy/server/a2a"
+	"github.com/tgruben-circuit/percy/a2a"
 )
 
 const testToken = "test-token"

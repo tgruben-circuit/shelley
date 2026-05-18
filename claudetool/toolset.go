@@ -212,6 +212,10 @@ func NewToolSet(ctx context.Context, cfg ToolSetConfig) *ToolSet {
 		tools = append(tools, cfg.MemorySearchTool)
 	}
 
+	// A2A dispatch — delegate tasks to remote A2A-speaking agents.
+	// Deferred under category "a2a" so it loads only when the orchestrator needs it.
+	tools = append(tools, (&A2ADispatchTool{}).Tool())
+
 	var cleanups []func()
 
 	if cfg.EnableBrowser {

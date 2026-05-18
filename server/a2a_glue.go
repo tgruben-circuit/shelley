@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/tgruben-circuit/percy/llm"
-	"github.com/tgruben-circuit/percy/server/a2a"
+	"github.com/tgruben-circuit/percy/a2a"
 )
 
 // A2ABackend adapts *Server to a2a.Backend.
