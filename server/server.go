@@ -20,7 +20,6 @@ import (
 	"tailscale.com/util/singleflight"
 
 	"github.com/tgruben-circuit/percy/claudetool"
-	"github.com/tgruben-circuit/percy/cluster"
 	"github.com/tgruben-circuit/percy/db"
 	"github.com/tgruben-circuit/percy/db/generated"
 	"github.com/tgruben-circuit/percy/llm"
@@ -240,7 +239,6 @@ type Server struct {
 	versionChecker      *VersionChecker
 	notifDispatcher     *notifications.Dispatcher
 	muninnSink          *muninn.Sink
-	clusterNode         *cluster.Node
 	shutdownCh          chan struct{} // Signals background routines to stop
 	indexQueue          chan string   // Buffered queue for conversation IDs to index
 }
@@ -296,13 +294,6 @@ func (s *Server) SetMemoryDB(mdb *memory.DB) {
 // If nil, vector search is disabled (FTS-only).
 func (s *Server) SetEmbedder(e memory.Embedder) {
 	s.embedder = e
-}
-
-// SetClusterNode sets the cluster node for multi-agent coordination.
-// If nil, cluster features are disabled.
-func (s *Server) SetClusterNode(node *cluster.Node) {
-	s.clusterNode = node
-	s.toolSetConfig.ClusterNode = node
 }
 
 // SetMuninnSink sets the MuninnDB sink for dual-writing memory cells.
@@ -477,9 +468,6 @@ func (s *Server) RegisterRoutes(mux *http.ServeMux) {
 	mux.Handle("/api/notification-channels/", http.HandlerFunc(s.handleNotificationChannel))
 	mux.Handle("/api/notification-channel-types", http.HandlerFunc(s.handleNotificationChannelTypes))
 
-	// Cluster API
-	mux.Handle("GET /api/cluster/status", http.HandlerFunc(s.handleClusterStatus))
-
 	// Web push API
 	mux.Handle("GET /api/push/vapid-public-key", http.HandlerFunc(s.handlePushVapidKey))
 	mux.Handle("POST /api/push/subscribe", http.HandlerFunc(s.handlePushSubscribe))
@@ -512,45 +500,6 @@ func (s *Server) RegisterRoutes(mux *http.ServeMux) {
 
 	// Serve embedded UI assets
 	mux.Handle("/", s.staticHandler(ui.Assets()))
-}
-
-func (s *Server) handleClusterStatus(w http.ResponseWriter, r *http.Request) {
-	var resp map[string]any
-
-	if s.clusterNode == nil {
-		resp = map[string]any{
-			"agents":       []any{},
-			"tasks":        []any{},
-			"plan_summary": map[string]int{"total": 0},
-		}
-	} else {
-		ctx := r.Context()
-		agents, _ := s.clusterNode.Registry.List(ctx)
-
-		var allTasks []cluster.Task
-		for _, st := range []cluster.TaskStatus{
-			cluster.TaskStatusSubmitted, cluster.TaskStatusAssigned,
-			cluster.TaskStatusWorking, cluster.TaskStatusCompleted,
-			cluster.TaskStatusFailed,
-		} {
-			tasks, _ := s.clusterNode.Tasks.ListByStatus(ctx, st)
-			allTasks = append(allTasks, tasks...)
-		}
-
-		summary := map[string]int{"total": len(allTasks)}
-		for _, t := range allTasks {
-			summary[string(t.Status)]++
-		}
-
-		resp = map[string]any{
-			"agents":       agents,
-			"tasks":        allTasks,
-			"plan_summary": summary,
-		}
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
 }
 
 // handleValidateCwd validates that a path exists and is a directory
@@ -1047,20 +996,6 @@ func (s *Server) recordMessage(ctx context.Context, conversationID string, messa
 	return nil
 }
 
-// recordMessageForConversation records a message for a specific conversation.
-// This is a direct method on Server, unlike the recordMessage closure created
-// per-conversation in getOrCreateConversationManager. Used by the cluster worker
-// to insert messages (e.g. system prompts) before a ConversationManager exists.
-func (s *Server) recordMessageForConversation(ctx context.Context, conversationID string, msg llm.Message, usage llm.Usage, msgType db.MessageType) error {
-	_, err := s.db.CreateMessage(ctx, db.CreateMessageParams{
-		ConversationID: conversationID,
-		Type:           msgType,
-		LLMData:        msg,
-		UsageData:      usage,
-	})
-	return err
-}
-
 // getMessageType determines the message type from an LLM message
 func (s *Server) getMessageType(message llm.Message) (db.MessageType, error) {
 	// System-generated errors are stored as error type
@@ -1315,12 +1250,6 @@ func (s *Server) StartWithListener(listener net.Listener) error {
 	// Set up HTTP server with routes and middleware
 	mux := http.NewServeMux()
 	s.RegisterRoutes(mux)
-
-	// Start cluster worker if in cluster mode
-	s.startClusterWorker()
-
-	// Start cluster monitor (merge pipeline) on orchestrator node
-	s.startClusterMonitor()
 
 	// Add middleware (applied in reverse order: last added = first executed)
 	handler := LoggerMiddleware(s.logger)(mux)

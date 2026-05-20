@@ -2,20 +2,17 @@ package main
 
 import (
 	"context"
-	crypto_rand "crypto/rand"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"log/slog"
 	"net"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 
 	"github.com/tgruben-circuit/percy/claudetool"
 	memtool "github.com/tgruben-circuit/percy/claudetool/memory"
-	"github.com/tgruben-circuit/percy/cluster"
 	"github.com/tgruben-circuit/percy/db"
 	"github.com/tgruben-circuit/percy/memory"
 	"github.com/tgruben-circuit/percy/memory/muninn"
@@ -98,9 +95,6 @@ func runServe(global GlobalConfig, args []string) {
 	port := fs.String("port", "9000", "Port to listen on")
 	systemdActivation := fs.Bool("systemd-activation", false, "Use systemd socket activation (listen on fd from systemd)")
 	requireHeader := fs.String("require-header", "", "Require this header on all API requests (e.g., X-Exedev-Userid)")
-	clusterAddr := fs.String("cluster", "", "NATS cluster address (':PORT' to embed, 'nats://host:port' to connect)")
-	agentName := fs.String("agent-name", "", "Agent name in cluster")
-	capabilities := fs.String("capabilities", "", "Comma-separated agent capabilities")
 	if err := fs.Parse(args); err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing serve flags: %v\n", err)
 		os.Exit(1)
@@ -210,31 +204,6 @@ func runServe(global GlobalConfig, args []string) {
 	svr.SeedNotificationChannelsFromConfig(llmConfig.NotificationChannels)
 	// Load notification channels from DB
 	svr.ReloadNotificationChannels()
-
-	if *clusterAddr != "" {
-		cfg := cluster.NodeConfig{
-			AgentID:   generateAgentID(),
-			AgentName: *agentName,
-			Logger:    logger,
-		}
-		if *capabilities != "" {
-			cfg.Capabilities = strings.Split(*capabilities, ",")
-		}
-		if strings.HasPrefix(*clusterAddr, ":") {
-			cfg.ListenAddr = *clusterAddr
-			cfg.StoreDir = filepath.Join(filepath.Dir(global.DBPath), "nats-data")
-		} else {
-			cfg.NATSUrl = *clusterAddr
-		}
-		node, nodeErr := cluster.StartNode(context.Background(), cfg)
-		if nodeErr != nil {
-			logger.Error("Failed to start cluster node", "error", nodeErr)
-			os.Exit(1)
-		}
-		defer node.Stop()
-		svr.SetClusterNode(node)
-		logger.Info("Cluster node started", "agent_id", cfg.AgentID, "nats", *clusterAddr)
-	}
 
 	if *systemdActivation {
 		listener, listenerErr := systemdListener()
@@ -479,12 +448,6 @@ func buildLLMConfig(logger *slog.Logger, configPath, terminalURL, defaultModel s
 	}
 
 	return llmCfg
-}
-
-func generateAgentID() string {
-	b := make([]byte, 6)
-	crypto_rand.Read(b)
-	return fmt.Sprintf("agent-%x", b)
 }
 
 // systemdListener returns a net.Listener from systemd socket activation.

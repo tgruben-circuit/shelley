@@ -362,7 +362,7 @@ func TestToolSet_NoDeferredWithoutOptionalTools(t *testing.T) {
 		LLMProvider: provider,
 		ModelID:     "test-model",
 		WorkingDir:  "/test",
-		// No browser, no LSP, no cluster
+		// No browser, no LSP
 	}
 
 	ctx := context.Background()
@@ -396,9 +396,6 @@ func TestToolSet_NoDeferredWithoutOptionalTools(t *testing.T) {
 		}
 		if tool.Category == "lsp" {
 			t.Errorf("unexpected LSP tool %q without EnableCodeIntelligence", tool.Name)
-		}
-		if tool.Category == "cluster" {
-			t.Errorf("unexpected cluster tool %q without ClusterNode", tool.Name)
 		}
 	}
 
