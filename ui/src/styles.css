@@ -5546,3 +5546,45 @@ kbd {
 
 /* Skills modal sizing */
 .skills-modal .modal { max-width: 600px; }
+
+/* Confidence callouts (rendered from <confidence level="...">...</confidence>) */
+.percy-confidence {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5em;
+  margin: 0.5em 0;
+  padding: 0.4em 0.75em;
+  border-radius: 6px;
+  border-left: 3px solid var(--border);
+  font-size: 0.875rem;
+  background: var(--bg-secondary, rgba(127, 127, 127, 0.08));
+}
+.percy-confidence-label {
+  font-weight: 600;
+  text-transform: lowercase;
+  letter-spacing: 0.02em;
+  font-variant-caps: small-caps;
+  flex-shrink: 0;
+}
+.percy-confidence-body {
+  color: var(--text-secondary);
+}
+.percy-confidence-high {
+  border-left-color: #16a34a;
+}
+.percy-confidence-high .percy-confidence-label {
+  color: #16a34a;
+}
+.percy-confidence-medium {
+  border-left-color: #d97706;
+}
+.percy-confidence-medium .percy-confidence-label {
+  color: #d97706;
+}
+.percy-confidence-low {
+  border-left-color: #dc2626;
+}
+.percy-confidence-low .percy-confidence-label {
+  color: #dc2626;
+}
