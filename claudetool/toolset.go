@@ -143,6 +143,7 @@ func NewToolSet(ctx context.Context, cfg ToolSetConfig) *ToolSet {
 		Simplified:       simplified,
 		WorkingDir:       wd,
 		ClipboardEnabled: true,
+		Callback:         appendVerifierToOutput(wd),
 	}
 
 	keywordTool := NewKeywordToolWithWorkingDir(cfg.LLMProvider, wd)
