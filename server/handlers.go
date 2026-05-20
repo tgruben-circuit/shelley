@@ -560,6 +560,9 @@ func (s *Server) conversationMux() *http.ServeMux {
 	mux.HandleFunc("POST /{id}/regenerate", func(w http.ResponseWriter, r *http.Request) {
 		s.handleRegenerateMessage(w, r, r.PathValue("id"))
 	})
+	mux.HandleFunc("POST /{id}/critique", func(w http.ResponseWriter, r *http.Request) {
+		s.handleCritiqueConversation(w, r, r.PathValue("id"))
+	})
 	return mux
 }
 

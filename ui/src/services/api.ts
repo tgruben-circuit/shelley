@@ -131,6 +131,22 @@ class ApiService {
     }
   }
 
+  async critiqueConversation(
+    conversationId: string,
+    model?: string,
+  ): Promise<{ status: string; message_id: string }> {
+    const response = await fetch(`${this.baseUrl}/conversation/${conversationId}/critique`, {
+      method: "POST",
+      headers: this.postHeaders,
+      body: JSON.stringify(model ? { model } : {}),
+    });
+    if (!response.ok) {
+      const text = (await response.text()).trim();
+      throw new ApiError(text || `Failed to critique: ${response.statusText}`, response.status);
+    }
+    return response.json();
+  }
+
   async switchConversationModel(
     conversationId: string,
     model: string,

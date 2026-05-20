@@ -1131,6 +1131,28 @@ function ChatInterface({
       return;
     }
 
+    // Handle /critique command: ask the server to critique the latest assistant
+    // response. The endpoint inserts the critique as a new message that arrives
+    // via SSE; we don't need to do anything else here.
+    if (trimmedMessage === "/critique") {
+      if (!conversationId) {
+        setError("Start a conversation before asking for a critique.");
+        return;
+      }
+      try {
+        setSending(true);
+        setError(null);
+        await api.critiqueConversation(conversationId, selectedModel || undefined);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Unknown error";
+        setError(msg);
+        throw err;
+      } finally {
+        setSending(false);
+      }
+      return;
+    }
+
     try {
       setSending(true);
       setError(null);
