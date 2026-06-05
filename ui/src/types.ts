@@ -7,6 +7,11 @@ import {
   NotificationEventForTS,
   Usage as GeneratedUsage,
   MessageType as GeneratedMessageType,
+  PRSummary as GeneratedPRSummary,
+  PRDetail as GeneratedPRDetail,
+  ReviewThread as GeneratedReviewThread,
+  ReviewSummary as GeneratedReviewSummary,
+  Comment as GeneratedPRComment,
 } from "./generated-types";
 
 // Re-export generated types
@@ -14,6 +19,25 @@ export type Conversation = GeneratedConversation;
 export type ConversationWithState = ConversationWithStateForTS;
 export type Usage = GeneratedUsage;
 export type MessageType = GeneratedMessageType;
+
+// GitHub PR types
+export type PRSummary = GeneratedPRSummary;
+export type PRDetail = GeneratedPRDetail;
+export type ReviewThread = GeneratedReviewThread;
+export type ReviewSummary = GeneratedReviewSummary;
+export type PRComment = GeneratedPRComment;
+
+// PR detail response from GET /api/conversation/<id>/pr
+export interface PRResponse {
+  detail: PRDetail | null;
+  error?: string;
+}
+
+// PR status streaming update (mirrors server PRStatusUpdate)
+export interface PRStatusUpdate {
+  conversation_id: string;
+  pr: PRSummary | null;
+}
 
 // Extend the generated Message type with parsed data
 export interface Message extends Omit<ApiMessageForTS, "type"> {
@@ -75,6 +99,7 @@ export interface StreamResponse extends Omit<StreamResponseForTS, "messages"> {
   conversation_list_update?: ConversationListUpdate;
   heartbeat?: boolean;
   notification_event?: NotificationEvent;
+  pr_status_update?: PRStatusUpdate;
 }
 
 // Link represents a custom link that can be added to the UI

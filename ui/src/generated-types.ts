@@ -60,6 +60,16 @@ export interface StreamResponseForTS {
   notification_event?: NotificationEventForTS | null;
 }
 
+export interface PRSummary {
+  number: number;
+  state: string;
+  is_draft: boolean;
+  review_decision: string;
+  url: string;
+  unresolved_count: number;
+  comment_count: number;
+}
+
 export interface ConversationWithStateForTS {
   conversation_id: string;
   slug: string | null;
@@ -71,6 +81,46 @@ export interface ConversationWithStateForTS {
   parent_conversation_id: string | null;
   model: string | null;
   working: boolean;
+  pr?: PRSummary | null;
+}
+
+export interface Comment {
+  id: string;
+  author: string;
+  body: string;
+  created_at: string;
+  url: string;
+}
+
+export interface ReviewSummary {
+  id: string;
+  author: string;
+  body: string;
+  state: string;
+  submitted_at: string;
+  url: string;
+}
+
+export interface ReviewThread {
+  id: string;
+  is_resolved: boolean;
+  is_outdated: boolean;
+  path: string;
+  line: number;
+  comments: Comment[] | null;
+}
+
+export interface PRDetail {
+  number: number;
+  title: string;
+  url: string;
+  state: string;
+  is_draft: boolean;
+  review_decision: string;
+  author: string;
+  conversation: Comment[] | null;
+  reviews: ReviewSummary[] | null;
+  threads: ReviewThread[] | null;
 }
 
 export type MessageType = "user" | "agent" | "tool" | "error" | "system" | "gitinfo";

@@ -8,10 +8,14 @@ import {
   GitFileDiff,
   VersionInfo,
   CommitInfo,
+  PRResponse,
 } from "../types";
 
 export class ApiError extends Error {
-  constructor(message: string, public readonly status?: number) {
+  constructor(
+    message: string,
+    public readonly status?: number,
+  ) {
     super(message);
     this.name = "ApiError";
   }
@@ -295,6 +299,47 @@ class ApiService {
     return response.json();
   }
 
+  async getPR(conversationId: string): Promise<PRResponse> {
+    const response = await fetch(`${this.baseUrl}/conversation/${conversationId}/pr`);
+    if (!response.ok) {
+      throw new Error(`Failed to get PR: ${response.statusText}`);
+    }
+    return response.json();
+  }
+
+  private async postPR(conversationId: string, action: string, body: unknown): Promise<PRResponse> {
+    const response = await fetch(`${this.baseUrl}/conversation/${conversationId}/pr/${action}`, {
+      method: "POST",
+      headers: this.postHeaders,
+      body: JSON.stringify(body),
+    });
+    if (!response.ok) {
+      const text = (await response.text()).trim();
+      throw new Error(text || `Failed to ${action}: ${response.statusText}`);
+    }
+    return response.json();
+  }
+
+  async replyToPRThread(
+    conversationId: string,
+    threadId: string,
+    body: string,
+  ): Promise<PRResponse> {
+    return this.postPR(conversationId, "reply", { thread_id: threadId, body });
+  }
+
+  async resolvePRThread(
+    conversationId: string,
+    threadId: string,
+    resolved: boolean,
+  ): Promise<PRResponse> {
+    return this.postPR(conversationId, "resolve", { thread_id: threadId, resolved });
+  }
+
+  async commentOnPR(conversationId: string, body: string): Promise<PRResponse> {
+    return this.postPR(conversationId, "comment", { body });
+  }
+
   async getSubagents(conversationId: string): Promise<Conversation[]> {
     const response = await fetch(`${this.baseUrl}/conversation/${conversationId}/subagents`);
     if (!response.ok) {
@@ -416,17 +461,27 @@ class ApiService {
     }
     return response.json();
   }
-  async forkConversation(sourceConversationId: string, atSequenceId: number, model?: string): Promise<{ conversation_id: string }> {
+  async forkConversation(
+    sourceConversationId: string,
+    atSequenceId: number,
+    model?: string,
+  ): Promise<{ conversation_id: string }> {
     const response = await fetch(`${this.baseUrl}/conversations/fork`, {
       method: "POST",
       headers: this.postHeaders,
-      body: JSON.stringify({ source_conversation_id: sourceConversationId, at_sequence_id: atSequenceId, model }),
+      body: JSON.stringify({
+        source_conversation_id: sourceConversationId,
+        at_sequence_id: atSequenceId,
+        model,
+      }),
     });
     if (!response.ok) throw new Error(`Failed to fork: ${response.statusText}`);
     return response.json();
   }
 
-  async getTouchedFiles(conversationId: string): Promise<Array<{path: string; operation: string; count: number}>> {
+  async getTouchedFiles(
+    conversationId: string,
+  ): Promise<Array<{ path: string; operation: string; count: number }>> {
     const response = await fetch(`${this.baseUrl}/conversation/${conversationId}/files`);
     if (!response.ok) throw new Error(`Failed to get files: ${response.statusText}`);
     return response.json();

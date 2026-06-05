@@ -3,6 +3,7 @@ import { Conversation, ConversationWithState } from "../types";
 import { api } from "../services/api";
 import Modal from "./Modal";
 import SkillsList from "./SkillsList";
+import PRBadge from "./PRBadge";
 
 interface ConversationDrawerProps {
   isOpen: boolean;
@@ -20,6 +21,7 @@ interface ConversationDrawerProps {
   subagentUpdate?: Conversation | null; // When a subagent is created/updated
   subagentStateUpdate?: { conversation_id: string; working: boolean } | null; // When a subagent's working state changes
   onShowCostDashboard?: () => void;
+  onOpenPRPanel?: (conversationId: string) => void; // Open the PR review panel for a conversation
 }
 
 function ConversationDrawer({
@@ -38,6 +40,7 @@ function ConversationDrawer({
   subagentUpdate,
   subagentStateUpdate,
   onShowCostDashboard,
+  onOpenPRPanel,
 }: ConversationDrawerProps) {
   const [showArchived, setShowArchived] = useState(false);
   const [showSkillsModal, setShowSkillsModal] = useState(false);
@@ -443,6 +446,12 @@ function ConversationDrawer({
                               {formatCwdForDisplay(conversation.cwd)}
                             </span>
                           )}
+                          {!showArchived && (conversation as ConversationWithState).pr && (
+                            <PRBadge
+                              pr={(conversation as ConversationWithState).pr!}
+                              onClick={() => onOpenPRPanel?.(conversation.conversation_id)}
+                            />
+                          )}
                           {!showArchived && (
                             <div
                               className="conversation-actions"
@@ -712,13 +721,7 @@ function ConversationDrawer({
                 padding: "0.5rem",
               }}
             >
-              <svg
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                width="20"
-                height="20"
-              >
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="20" height="20">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"

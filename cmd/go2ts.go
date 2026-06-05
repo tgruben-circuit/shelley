@@ -15,6 +15,7 @@ import (
 	"go.skia.org/infra/go/go2ts"
 	"github.com/tgruben-circuit/percy/db"
 	"github.com/tgruben-circuit/percy/db/generated"
+	"github.com/tgruben-circuit/percy/github"
 	"github.com/tgruben-circuit/percy/llm"
 	"github.com/tgruben-circuit/percy/server/notifications"
 )
@@ -74,6 +75,15 @@ func TS() *go2ts.Go2TS {
 		notificationEventForTS{},
 	)
 
+	// GitHub PR status types
+	generator.AddMultiple(
+		github.PRSummary{},
+		github.PRDetail{},
+		github.Comment{},
+		github.ReviewSummary{},
+		github.ReviewThread{},
+	)
+
 	// Generate clean nominal types
 	generator.GenerateNominalTypes = true
 
@@ -107,9 +117,10 @@ type conversationWithStateForTS struct {
 	UpdatedAt            string  `json:"updated_at"`
 	Cwd                  *string `json:"cwd"`
 	Archived             bool    `json:"archived"`
-	ParentConversationID *string `json:"parent_conversation_id"`
-	Model                *string `json:"model"`
-	Working              bool    `json:"working"`
+	ParentConversationID *string            `json:"parent_conversation_id"`
+	Model                *string            `json:"model"`
+	Working              bool               `json:"working"`
+	PR                   *github.PRSummary  `json:"pr,omitempty"`
 }
 
 type streamResponseForTS struct {
