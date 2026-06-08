@@ -5,6 +5,7 @@ import {
   StreamResponse,
   LLMContent,
   ConversationListUpdate,
+  PRStatusUpdate,
   isDistillStatusMessage,
 } from "../types";
 import { api, ApiError } from "../services/api";
@@ -504,6 +505,7 @@ interface ChatInterfaceProps {
   onConversationUpdate?: (conversation: Conversation) => void;
   onConversationListUpdate?: (update: ConversationListUpdate) => void;
   onConversationStateUpdate?: (state: ConversationStateUpdate) => void;
+  onPRStatusUpdate?: (update: PRStatusUpdate) => void;
   onFirstMessage?: (message: string, model: string, cwd?: string) => Promise<void>;
   onContinueConversation?: (
     sourceConversationId: string,
@@ -539,6 +541,7 @@ function ChatInterface({
   onConversationUpdate,
   onConversationListUpdate,
   onConversationStateUpdate,
+  onPRStatusUpdate,
   onFirstMessage,
   onContinueConversation,
   onDistillConversation,
@@ -734,7 +737,9 @@ function ChatInterface({
   const [terminalAutoFocusId, setTerminalAutoFocusId] = useState<string | null>(null);
 
   const [showFileTree, setShowFileTree] = useState(false);
-  const [editingMessage, setEditingMessage] = useState<{sequenceId: number; text: string} | null>(null);
+  const [editingMessage, setEditingMessage] = useState<{ sequenceId: number; text: string } | null>(
+    null,
+  );
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
@@ -990,6 +995,11 @@ function ChatInterface({
           onConversationListUpdate(streamResponse.conversation_list_update);
         }
 
+        // Handle PR status updates (for any conversation's badge)
+        if (onPRStatusUpdate && streamResponse.pr_status_update) {
+          onPRStatusUpdate(streamResponse.pr_status_update);
+        }
+
         // Handle conversation state updates (explicit from server)
         if (streamResponse.conversation_state) {
           // Update the conversations list with new working state
@@ -1107,8 +1117,7 @@ function ChatInterface({
         const terminal: EphemeralTerminal = {
           id: `term-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
           command: shellCommand,
-          cwd:
-            currentConversation?.cwd || selectedCwd || window.__PERCY_INIT__?.default_cwd || "/",
+          cwd: currentConversation?.cwd || selectedCwd || window.__PERCY_INIT__?.default_cwd || "/",
           createdAt: new Date(),
         };
         setEphemeralTerminals((prev) => [...prev, terminal]);
@@ -1567,7 +1576,7 @@ function ChatInterface({
             }}
             onCommentTextChange={setDiffCommentText}
             onFork={onForkConversation ? handleForkConversation : undefined}
-            onEdit={(sequenceId, text) => setEditingMessage({sequenceId, text})}
+            onEdit={(sequenceId, text) => setEditingMessage({ sequenceId, text })}
             onRegenerate={handleRegenerate}
           />
         );
@@ -1788,7 +1797,10 @@ function ChatInterface({
                     <button
                       onClick={() => {
                         setShowOverflowMenu(false);
-                        window.open(`/api/conversation/${currentConversation.conversation_id}/export?format=markdown`, "_blank");
+                        window.open(
+                          `/api/conversation/${currentConversation.conversation_id}/export?format=markdown`,
+                          "_blank",
+                        );
                       }}
                       className="overflow-menu-item"
                     >
@@ -1810,7 +1822,10 @@ function ChatInterface({
                     <button
                       onClick={() => {
                         setShowOverflowMenu(false);
-                        window.open(`/api/conversation/${currentConversation.conversation_id}/export?format=json`, "_blank");
+                        window.open(
+                          `/api/conversation/${currentConversation.conversation_id}/export?format=json`,
+                          "_blank",
+                        );
                       }}
                       className="overflow-menu-item"
                     >
@@ -1925,7 +1940,16 @@ function ChatInterface({
                     setShowThemePicker(true);
                   }}
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
                     <circle cx="13.5" cy="6.5" r=".5" fill="currentColor" />
                     <circle cx="17.5" cy="10.5" r=".5" fill="currentColor" />
                     <circle cx="8.5" cy="7.5" r=".5" fill="currentColor" />

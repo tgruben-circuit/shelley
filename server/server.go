@@ -22,6 +22,8 @@ import (
 	"github.com/tgruben-circuit/percy/claudetool"
 	"github.com/tgruben-circuit/percy/db"
 	"github.com/tgruben-circuit/percy/db/generated"
+	"github.com/tgruben-circuit/percy/github"
+	"github.com/tgruben-circuit/percy/gitstate"
 	"github.com/tgruben-circuit/percy/llm"
 	"github.com/tgruben-circuit/percy/memory"
 	"github.com/tgruben-circuit/percy/memory/muninn"
@@ -57,6 +59,16 @@ type ConversationState struct {
 type ConversationWithState struct {
 	generated.Conversation
 	Working bool `json:"working"`
+	// PR is the GitHub pull-request status for the conversation's branch, or nil
+	// if the branch has no open PR (or the cwd is not a GitHub repo).
+	PR *github.PRSummary `json:"pr,omitempty"`
+}
+
+// PRStatusUpdate is broadcast when a conversation's PR status changes. A nil PR
+// clears the badge.
+type PRStatusUpdate struct {
+	ConversationID string            `json:"conversation_id"`
+	PR             *github.PRSummary `json:"pr"`
 }
 
 // StreamResponse represents the response format for conversation streaming
@@ -71,6 +83,8 @@ type StreamResponse struct {
 	Heartbeat bool `json:"heartbeat,omitempty"`
 	// NotificationEvent is set when a notification-worthy event occurs (e.g. agent finished).
 	NotificationEvent *notifications.Event `json:"notification_event,omitempty"`
+	// PRStatusUpdate is set when a conversation's GitHub PR status changes.
+	PRStatusUpdate *PRStatusUpdate `json:"pr_status_update,omitempty"`
 }
 
 // LLMProvider is an interface for getting LLM services
@@ -241,6 +255,11 @@ type Server struct {
 	muninnSink          *muninn.Sink
 	shutdownCh          chan struct{} // Signals background routines to stop
 	indexQueue          chan string   // Buffered queue for conversation IDs to index
+	prCache             *github.Cache // Caches GitHub PR status keyed by repo+branch
+	// lastPRSummary tracks the last broadcast PR summary per conversation so the
+	// poller only broadcasts on change. Guarded by mu. Also read by the list
+	// handler to fill ConversationWithState.PR without blocking on gh.
+	lastPRSummary map[string]github.PRSummary
 }
 
 // NewServer creates a new server instance
@@ -260,6 +279,8 @@ func NewServer(database *db.DB, llmManager LLMProvider, toolSetConfig claudetool
 		notifDispatcher:     notifications.NewDispatcher(logger),
 		shutdownCh:          make(chan struct{}),
 		indexQueue:          make(chan string, 64),
+		prCache:             github.NewCache(),
+		lastPRSummary:       make(map[string]github.PRSummary),
 	}
 	go s.indexWorker()
 
@@ -1203,6 +1224,143 @@ func (s *Server) getWorkingConversations() map[string]bool {
 	return working
 }
 
+// getPRSummaries returns a copy of the last broadcast PR summary per conversation.
+func (s *Server) getPRSummaries() map[string]github.PRSummary {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	out := make(map[string]github.PRSummary, len(s.lastPRSummary))
+	for id, summary := range s.lastPRSummary {
+		out[id] = summary
+	}
+	return out
+}
+
+// publishPRStatus broadcasts a PR status update to ALL active conversation streams.
+func (s *Server) publishPRStatus(update PRStatusUpdate) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, manager := range s.activeConversations {
+		manager.subpub.Broadcast(StreamResponse{PRStatusUpdate: &update})
+	}
+}
+
+// maybePublishPR updates lastPRSummary for convID and broadcasts only if the
+// summary changed since the last poll.
+func (s *Server) maybePublishPR(convID string, summary *github.PRSummary) {
+	s.mu.Lock()
+	prev, had := s.lastPRSummary[convID]
+	var changed bool
+	switch {
+	case summary == nil:
+		if had {
+			delete(s.lastPRSummary, convID)
+			changed = true
+		}
+	case !had || prev != *summary:
+		s.lastPRSummary[convID] = *summary
+		changed = true
+	}
+	s.mu.Unlock()
+	if changed {
+		s.publishPRStatus(PRStatusUpdate{ConversationID: convID, PR: summary})
+	}
+}
+
+// prPollRoutine periodically refreshes GitHub PR status for active conversations.
+func (s *Server) prPollRoutine() {
+	// Short initial delay so badges appear soon after startup.
+	timer := time.NewTimer(5 * time.Second)
+	defer timer.Stop()
+	select {
+	case <-timer.C:
+	case <-s.shutdownCh:
+		return
+	}
+	s.pollPRStatuses()
+
+	ticker := time.NewTicker(60 * time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			s.pollPRStatuses()
+		case <-s.shutdownCh:
+			return
+		}
+	}
+}
+
+// pollPRStatuses refreshes PR status for every active conversation's branch,
+// deduping by (repoRoot, branch), and broadcasts any changes.
+func (s *Server) pollPRStatuses() {
+	// Snapshot active conversation cwds.
+	s.mu.Lock()
+	cwds := make(map[string]string, len(s.activeConversations))
+	for id, manager := range s.activeConversations {
+		manager.mu.Lock()
+		cwd := manager.cwd
+		manager.mu.Unlock()
+		if cwd != "" {
+			cwds[id] = cwd
+		}
+	}
+	s.mu.Unlock()
+
+	// Resolve (repoRoot, branch) per conversation and collect unique keys.
+	type repoBranch struct{ repoRoot, branch string }
+	convKey := make(map[string]repoBranch, len(cwds))
+	unique := make(map[repoBranch]bool)
+	for id, cwd := range cwds {
+		st := gitstate.GetGitState(cwd)
+		if st == nil || !st.IsRepo || st.Branch == "" {
+			continue
+		}
+		k := repoBranch{repoRoot: st.Worktree, branch: st.Branch}
+		convKey[id] = k
+		unique[k] = true
+	}
+
+	// Refresh each unique branch with bounded concurrency.
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	const maxConcurrent = 4
+	sem := make(chan struct{}, maxConcurrent)
+	var wg sync.WaitGroup
+	for k := range unique {
+		wg.Add(1)
+		sem <- struct{}{}
+		go func(k repoBranch) {
+			defer wg.Done()
+			defer func() { <-sem }()
+			fctx, fcancel := context.WithTimeout(ctx, 15*time.Second)
+			defer fcancel()
+			if _, err := s.prCache.Refresh(fctx, k.repoRoot, k.branch); err != nil {
+				s.logger.Debug("PR poll failed", "repo", k.repoRoot, "branch", k.branch, "error", err)
+			}
+		}(k)
+	}
+	wg.Wait()
+
+	// Broadcast changes for conversations with a branch.
+	for id, k := range convKey {
+		s.maybePublishPR(id, s.prCache.Peek(k.repoRoot, k.branch))
+	}
+
+	// Clear badges for previously-tracked conversations that no longer resolve to
+	// a branch (cwd changed, detached HEAD, or conversation closed).
+	s.mu.Lock()
+	var stale []string
+	for id := range s.lastPRSummary {
+		if _, ok := convKey[id]; !ok {
+			stale = append(stale, id)
+		}
+	}
+	s.mu.Unlock()
+	for _, id := range stale {
+		s.maybePublishPR(id, nil)
+	}
+}
+
 // IsAgentWorking returns whether the agent is currently working on the given conversation.
 // Returns false if the conversation doesn't have an active manager.
 func (s *Server) IsAgentWorking(conversationID string) bool {
@@ -1291,6 +1449,9 @@ func (s *Server) StartWithListener(listener net.Listener) error {
 
 	// Start auto-upgrade routine
 	go s.autoUpgradeRoutine()
+
+	// Start GitHub PR status poller
+	go s.prPollRoutine()
 
 	// Get actual port from listener
 	actualPort := listener.Addr().(*net.TCPAddr).Port

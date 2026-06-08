@@ -23,6 +23,8 @@ import (
 	"github.com/tgruben-circuit/percy/claudetool/browse"
 	"github.com/tgruben-circuit/percy/db"
 	"github.com/tgruben-circuit/percy/db/generated"
+	"github.com/tgruben-circuit/percy/github"
+	"github.com/tgruben-circuit/percy/gitstate"
 	"github.com/tgruben-circuit/percy/llm"
 	"github.com/tgruben-circuit/percy/models"
 	"github.com/tgruben-circuit/percy/skills"
@@ -496,6 +498,8 @@ func (s *Server) handleConversations(w http.ResponseWriter, r *http.Request) {
 
 	// Get working states for all active conversations
 	workingStates := s.getWorkingConversations()
+	// Get last-polled PR summaries (filled by the background poller; never blocks).
+	prSummaries := s.getPRSummaries()
 
 	// Build response with working state included
 	result := make([]ConversationWithState, len(conversations))
@@ -503,6 +507,10 @@ func (s *Server) handleConversations(w http.ResponseWriter, r *http.Request) {
 		result[i] = ConversationWithState{
 			Conversation: conv,
 			Working:      workingStates[conv.ConversationID],
+		}
+		if pr, ok := prSummaries[conv.ConversationID]; ok {
+			prCopy := pr
+			result[i].PR = &prCopy
 		}
 	}
 
@@ -548,6 +556,18 @@ func (s *Server) conversationMux() *http.ServeMux {
 	mux.HandleFunc("GET /{id}/subagents", func(w http.ResponseWriter, r *http.Request) {
 		s.handleGetSubagents(w, r, r.PathValue("id"))
 	})
+	mux.HandleFunc("GET /{id}/pr", func(w http.ResponseWriter, r *http.Request) {
+		s.handleGetPR(w, r, r.PathValue("id"))
+	})
+	mux.HandleFunc("POST /{id}/pr/reply", func(w http.ResponseWriter, r *http.Request) {
+		s.handlePRReply(w, r, r.PathValue("id"))
+	})
+	mux.HandleFunc("POST /{id}/pr/resolve", func(w http.ResponseWriter, r *http.Request) {
+		s.handlePRResolve(w, r, r.PathValue("id"))
+	})
+	mux.HandleFunc("POST /{id}/pr/comment", func(w http.ResponseWriter, r *http.Request) {
+		s.handlePRComment(w, r, r.PathValue("id"))
+	})
 	mux.HandleFunc("GET /{id}/export", func(w http.ResponseWriter, r *http.Request) {
 		s.handleExportConversation(w, r)
 	})
@@ -564,6 +584,140 @@ func (s *Server) conversationMux() *http.ServeMux {
 		s.handleCritiqueConversation(w, r, r.PathValue("id"))
 	})
 	return mux
+}
+
+// conversationCwd returns the working directory for a conversation, preferring
+// the live value from an active manager and falling back to the database.
+func (s *Server) conversationCwd(ctx context.Context, conversationID string) string {
+	s.mu.Lock()
+	manager, ok := s.activeConversations[conversationID]
+	s.mu.Unlock()
+	if ok {
+		manager.mu.Lock()
+		defer manager.mu.Unlock()
+		return manager.cwd
+	}
+	conv, err := s.db.GetConversationByID(ctx, conversationID)
+	if err != nil || conv.Cwd == nil {
+		return ""
+	}
+	return *conv.Cwd
+}
+
+// prResponse is the payload for the PR endpoints. Detail is null when the branch
+// has no PR; Error is set when gh could not be reached.
+type prResponse struct {
+	Detail *github.PRDetail `json:"detail"`
+	Error  string           `json:"error,omitempty"`
+}
+
+// prKey resolves the (repoRoot, branch) for a conversation, or ok=false if the
+// conversation's cwd is not a git repo with a branch.
+func (s *Server) prKey(ctx context.Context, conversationID string) (repoRoot, branch string, ok bool) {
+	cwd := s.conversationCwd(ctx, conversationID)
+	if cwd == "" {
+		return "", "", false
+	}
+	st := gitstate.GetGitState(cwd)
+	if st == nil || !st.IsRepo || st.Branch == "" {
+		return "", "", false
+	}
+	return st.Worktree, st.Branch, true
+}
+
+// handleGetPR returns the full PR detail for a conversation's branch.
+func (s *Server) handleGetPR(w http.ResponseWriter, r *http.Request, conversationID string) {
+	ctx := r.Context()
+	w.Header().Set("Content-Type", "application/json")
+
+	repoRoot, branch, ok := s.prKey(ctx, conversationID)
+	if !ok {
+		_ = json.NewEncoder(w).Encode(prResponse{}) //nolint:errchkjson // best-effort HTTP response
+		return
+	}
+
+	detail, err := s.prCache.Get(ctx, repoRoot, branch, 10*time.Second)
+	resp := prResponse{Detail: detail}
+	if err != nil {
+		resp.Error = github.FriendlyError(err)
+	}
+	_ = json.NewEncoder(w).Encode(resp) //nolint:errchkjson // best-effort HTTP response
+}
+
+// writePRMutationResult broadcasts the updated badge and returns the refreshed
+// detail (or a friendly error) to the caller.
+func (s *Server) writePRMutationResult(w http.ResponseWriter, conversationID string, detail *github.PRDetail, err error) {
+	w.Header().Set("Content-Type", "application/json")
+	if err != nil {
+		_ = json.NewEncoder(w).Encode(prResponse{Error: github.FriendlyError(err)}) //nolint:errchkjson // best-effort HTTP response
+		return
+	}
+	var summary *github.PRSummary
+	if detail != nil {
+		s2 := detail.Summary()
+		summary = &s2
+	}
+	s.maybePublishPR(conversationID, summary)
+	_ = json.NewEncoder(w).Encode(prResponse{Detail: detail}) //nolint:errchkjson // best-effort HTTP response
+}
+
+// handlePRReply posts a reply to an inline review thread.
+func (s *Server) handlePRReply(w http.ResponseWriter, r *http.Request, conversationID string) {
+	ctx := r.Context()
+	var req struct {
+		ThreadID string `json:"thread_id"`
+		Body     string `json:"body"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.ThreadID == "" || strings.TrimSpace(req.Body) == "" {
+		http.Error(w, "thread_id and body are required", http.StatusBadRequest)
+		return
+	}
+	repoRoot, branch, ok := s.prKey(ctx, conversationID)
+	if !ok {
+		http.Error(w, "conversation has no PR branch", http.StatusBadRequest)
+		return
+	}
+	detail, err := s.prCache.Reply(ctx, repoRoot, branch, req.ThreadID, req.Body)
+	s.writePRMutationResult(w, conversationID, detail, err)
+}
+
+// handlePRResolve resolves or unresolves an inline review thread.
+func (s *Server) handlePRResolve(w http.ResponseWriter, r *http.Request, conversationID string) {
+	ctx := r.Context()
+	var req struct {
+		ThreadID string `json:"thread_id"`
+		Resolved bool   `json:"resolved"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.ThreadID == "" {
+		http.Error(w, "thread_id is required", http.StatusBadRequest)
+		return
+	}
+	repoRoot, branch, ok := s.prKey(ctx, conversationID)
+	if !ok {
+		http.Error(w, "conversation has no PR branch", http.StatusBadRequest)
+		return
+	}
+	detail, err := s.prCache.Resolve(ctx, repoRoot, branch, req.ThreadID, req.Resolved)
+	s.writePRMutationResult(w, conversationID, detail, err)
+}
+
+// handlePRComment posts a top-level conversation comment on the PR.
+func (s *Server) handlePRComment(w http.ResponseWriter, r *http.Request, conversationID string) {
+	ctx := r.Context()
+	var req struct {
+		Body string `json:"body"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || strings.TrimSpace(req.Body) == "" {
+		http.Error(w, "body is required", http.StatusBadRequest)
+		return
+	}
+	repoRoot, branch, ok := s.prKey(ctx, conversationID)
+	if !ok {
+		http.Error(w, "conversation has no PR branch", http.StatusBadRequest)
+		return
+	}
+	detail, err := s.prCache.Comment(ctx, repoRoot, branch, req.Body)
+	s.writePRMutationResult(w, conversationID, detail, err)
 }
 
 // handleGetConversation handles GET /api/conversation/<id>

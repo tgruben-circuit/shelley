@@ -8,7 +8,13 @@ import CommandPalette from "./components/CommandPalette";
 import ModelsModal from "./components/ModelsModal";
 import NotificationsModal from "./components/NotificationsModal";
 import CostDashboard from "./components/CostDashboard";
-import { Conversation, ConversationWithState, ConversationListUpdate } from "./types";
+import PRPanel from "./components/PRPanel";
+import {
+  Conversation,
+  ConversationWithState,
+  ConversationListUpdate,
+  PRStatusUpdate,
+} from "./types";
 import { api } from "./services/api";
 
 // Worker pool configuration for @pierre/diffs syntax highlighting
@@ -114,6 +120,8 @@ function App() {
   const [modelsModalOpen, setModelsModalOpen] = useState(false);
   const [notificationsModalOpen, setNotificationsModalOpen] = useState(false);
   const [costDashboardOpen, setCostDashboardOpen] = useState(false);
+  // Conversation whose PR review panel is open (null = closed).
+  const [prPanelConvId, setPrPanelConvId] = useState<string | null>(null);
   const [modelsRefreshTrigger, setModelsRefreshTrigger] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -260,6 +268,17 @@ function App() {
     },
     [],
   );
+
+  // Handle PR status updates (GitHub PR badge changes)
+  const handlePRStatusUpdate = useCallback((update: PRStatusUpdate) => {
+    setConversations((prev) =>
+      prev.map((conv) =>
+        conv.conversation_id === update.conversation_id
+          ? { ...conv, pr: update.pr ?? undefined }
+          : conv,
+      ),
+    );
+  }, []);
 
   // Update page title and URL when conversation changes
   useEffect(() => {
@@ -505,6 +524,7 @@ function App() {
           subagentUpdate={subagentUpdate}
           subagentStateUpdate={subagentStateUpdate}
           onShowCostDashboard={() => setCostDashboardOpen(true)}
+          onOpenPRPanel={setPrPanelConvId}
         />
 
         {/* Main chat interface */}
@@ -517,6 +537,7 @@ function App() {
             onConversationUpdate={updateConversation}
             onConversationListUpdate={handleConversationListUpdate}
             onConversationStateUpdate={handleConversationStateUpdate}
+            onPRStatusUpdate={handlePRStatusUpdate}
             onFirstMessage={handleFirstMessage}
             onContinueConversation={handleContinueConversation}
             onDistillConversation={handleDistillConversation}
@@ -572,9 +593,12 @@ function App() {
           onClose={() => setNotificationsModalOpen(false)}
         />
 
-        <CostDashboard
-          isOpen={costDashboardOpen}
-          onClose={() => setCostDashboardOpen(false)}
+        <CostDashboard isOpen={costDashboardOpen} onClose={() => setCostDashboardOpen(false)} />
+
+        <PRPanel
+          conversationId={prPanelConvId}
+          isOpen={prPanelConvId !== null}
+          onClose={() => setPrPanelConvId(null)}
         />
 
         {/* Backdrop for mobile drawer */}
