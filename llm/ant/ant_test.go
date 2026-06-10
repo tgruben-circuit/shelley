@@ -42,9 +42,11 @@ func TestClaudeModelName(t *testing.T) {
 		userName string
 		want     string
 	}{
-		{"claude model", "claude", Claude45Sonnet},
-		{"sonnet model", "sonnet", Claude45Sonnet},
-		{"opus model", "opus", Claude45Opus},
+		{"claude model", "claude", Claude46Sonnet},
+		{"sonnet model", "sonnet", Claude46Sonnet},
+		{"opus model", "opus", Claude48Opus},
+		{"fable model", "fable", Fable5},
+		{"haiku model", "haiku", Claude45Haiku},
 		{"unknown model", "gpt-4", ""},
 		{"empty string", "", ""},
 		{"random string", "random", ""},
@@ -72,6 +74,10 @@ func TestTokenContextWindow(t *testing.T) {
 		{"Claude45Haiku", Claude45Haiku, 200000},
 		{"Claude45Opus", Claude45Opus, 200000},
 		{"Claude46Opus", Claude46Opus, 1000000},
+		{"Claude47Opus", Claude47Opus, 1000000},
+		{"Claude48Opus", Claude48Opus, 1000000},
+		{"Claude46Sonnet", Claude46Sonnet, 1000000},
+		{"Fable5", Fable5, 1000000},
 		{"unknown model", "unknown-model", 200000},
 	}
 

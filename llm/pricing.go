@@ -12,6 +12,10 @@ type modelPricing struct {
 // Prices are from public provider pricing pages.
 var knownPricing = map[string]modelPricing{
 	// Anthropic Claude
+	"claude-fable-5":              {InputPerMillion: 10, OutputPerMillion: 50, CacheReadPerMillion: 1, CacheWritePerMillion: 12.5},
+	"claude-opus-4-8":             {InputPerMillion: 5, OutputPerMillion: 25, CacheReadPerMillion: 0.5, CacheWritePerMillion: 6.25},
+	"claude-opus-4-7":             {InputPerMillion: 5, OutputPerMillion: 25, CacheReadPerMillion: 0.5, CacheWritePerMillion: 6.25},
+	"claude-sonnet-4-6":           {InputPerMillion: 3, OutputPerMillion: 15, CacheReadPerMillion: 0.30, CacheWritePerMillion: 3.75},
 	"claude-opus-4-6":             {InputPerMillion: 15, OutputPerMillion: 75, CacheReadPerMillion: 1.5, CacheWritePerMillion: 18.75},
 	"claude-opus-4-5-20251101":    {InputPerMillion: 15, OutputPerMillion: 75, CacheReadPerMillion: 1.5, CacheWritePerMillion: 18.75},
 	"claude-sonnet-4-5-20250929":  {InputPerMillion: 3, OutputPerMillion: 15, CacheReadPerMillion: 0.30, CacheWritePerMillion: 3.75},

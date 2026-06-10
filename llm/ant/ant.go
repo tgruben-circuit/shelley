@@ -31,9 +31,12 @@ const (
 	Claude37Sonnet = "claude-3-7-sonnet-20250219"
 	Claude4Sonnet  = "claude-sonnet-4-20250514"
 	Claude45Sonnet = "claude-sonnet-4-5-20250929"
+	Claude46Sonnet = "claude-sonnet-4-6"
 	Claude45Opus   = "claude-opus-4-5-20251101"
 	Claude46Opus   = "claude-opus-4-6"
 	Claude47Opus   = "claude-opus-4-7"
+	Claude48Opus   = "claude-opus-4-8"
+	Fable5         = "claude-fable-5"
 )
 
 // useAdaptiveThinking reports whether the model requires adaptive thinking
@@ -41,7 +44,7 @@ const (
 // (thinking.type: "enabled" + budget_tokens).
 func useAdaptiveThinking(model string) bool {
 	switch model {
-	case Claude47Opus, Claude46Opus:
+	case Fable5, Claude48Opus, Claude47Opus, Claude46Opus, Claude46Sonnet:
 		return true
 	default:
 		return false
@@ -59,9 +62,13 @@ func IsClaudeModel(userName string) bool {
 func ClaudeModelName(userName string) string {
 	switch userName {
 	case "claude", "sonnet":
-		return Claude45Sonnet
+		return Claude46Sonnet
 	case "opus":
-		return Claude45Opus
+		return Claude48Opus
+	case "fable":
+		return Fable5
+	case "haiku":
+		return Claude45Haiku
 	default:
 		return ""
 	}
@@ -75,7 +82,7 @@ func (s *Service) TokenContextWindow() int {
 	}
 
 	switch model {
-	case Claude47Opus, Claude46Opus, Claude45Sonnet, Claude4Sonnet:
+	case Fable5, Claude48Opus, Claude47Opus, Claude46Opus, Claude46Sonnet, Claude45Sonnet, Claude4Sonnet:
 		return 1000000
 	case Claude37Sonnet:
 		return 200000
