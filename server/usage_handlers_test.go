@@ -116,9 +116,9 @@ func TestHandleUsageCostEstimation(t *testing.T) {
 		t.Fatalf("invalid JSON: %v", err)
 	}
 
-	// Cost should be estimated: 1000*15/1M + 500*75/1M = 0.015 + 0.0375 = 0.0525
-	if resp.TotalCostUSD < 0.05 || resp.TotalCostUSD > 0.06 {
-		t.Fatalf("expected estimated cost ~0.0525, got %f", resp.TotalCostUSD)
+	// Cost should be estimated: 1000*5/1M + 500*25/1M = 0.005 + 0.0125 = 0.0175
+	if resp.TotalCostUSD < 0.015 || resp.TotalCostUSD > 0.02 {
+		t.Fatalf("expected estimated cost ~0.0175, got %f", resp.TotalCostUSD)
 	}
 }
 

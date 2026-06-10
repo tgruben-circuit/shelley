@@ -20,8 +20,8 @@ func TestEstimateCostUSD(t *testing.T) {
 			model:  "claude-opus-4-6",
 			input:  1000,
 			output: 500,
-			// 1000 * 15/1M + 500 * 75/1M = 0.015 + 0.0375 = 0.0525
-			wantApprox: 0.0525,
+			// 1000 * 5/1M + 500 * 25/1M = 0.005 + 0.0125 = 0.0175
+			wantApprox: 0.0175,
 		},
 		{
 			name:       "claude opus 4.6 with cache",
@@ -30,9 +30,9 @@ func TestEstimateCostUSD(t *testing.T) {
 			output:     200,
 			cacheRead:  5000,
 			cacheWrite: 3000,
-			// 100*15/1M + 200*75/1M + 5000*1.5/1M + 3000*18.75/1M
-			// = 0.0015 + 0.015 + 0.0075 + 0.05625 = 0.08025
-			wantApprox: 0.08025,
+			// 100*5/1M + 200*25/1M + 5000*0.5/1M + 3000*6.25/1M
+			// = 0.0005 + 0.005 + 0.0025 + 0.01875 = 0.02675
+			wantApprox: 0.02675,
 		},
 		{
 			name:       "unknown model returns 0",

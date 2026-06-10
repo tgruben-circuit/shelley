@@ -16,11 +16,11 @@ var knownPricing = map[string]modelPricing{
 	"claude-opus-4-8":             {InputPerMillion: 5, OutputPerMillion: 25, CacheReadPerMillion: 0.5, CacheWritePerMillion: 6.25},
 	"claude-opus-4-7":             {InputPerMillion: 5, OutputPerMillion: 25, CacheReadPerMillion: 0.5, CacheWritePerMillion: 6.25},
 	"claude-sonnet-4-6":           {InputPerMillion: 3, OutputPerMillion: 15, CacheReadPerMillion: 0.30, CacheWritePerMillion: 3.75},
-	"claude-opus-4-6":             {InputPerMillion: 15, OutputPerMillion: 75, CacheReadPerMillion: 1.5, CacheWritePerMillion: 18.75},
-	"claude-opus-4-5-20251101":    {InputPerMillion: 15, OutputPerMillion: 75, CacheReadPerMillion: 1.5, CacheWritePerMillion: 18.75},
+	"claude-opus-4-6":             {InputPerMillion: 5, OutputPerMillion: 25, CacheReadPerMillion: 0.5, CacheWritePerMillion: 6.25},
+	"claude-opus-4-5-20251101":    {InputPerMillion: 5, OutputPerMillion: 25, CacheReadPerMillion: 0.5, CacheWritePerMillion: 6.25},
 	"claude-sonnet-4-5-20250929":  {InputPerMillion: 3, OutputPerMillion: 15, CacheReadPerMillion: 0.30, CacheWritePerMillion: 3.75},
 	"claude-sonnet-4-20250514":    {InputPerMillion: 3, OutputPerMillion: 15, CacheReadPerMillion: 0.30, CacheWritePerMillion: 3.75},
-	"claude-haiku-4-5-20251001":   {InputPerMillion: 0.80, OutputPerMillion: 4, CacheReadPerMillion: 0.08, CacheWritePerMillion: 1},
+	"claude-haiku-4-5-20251001":   {InputPerMillion: 1, OutputPerMillion: 5, CacheReadPerMillion: 0.10, CacheWritePerMillion: 1.25},
 
 	// OpenAI GPT-5 series (Codex / Responses)
 	"gpt-5.3-codex": {InputPerMillion: 2, OutputPerMillion: 8},
