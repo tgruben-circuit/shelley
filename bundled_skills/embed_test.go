@@ -11,17 +11,19 @@ func TestEmbeddedSkillsReturnsAll(t *testing.T) {
 	if err != nil {
 		t.Fatalf("EmbeddedSkills() error: %v", err)
 	}
-	if len(skills) != 20 {
-		t.Fatalf("expected 20 skills, got %d", len(skills))
+	if len(skills) != 22 {
+		t.Fatalf("expected 22 skills, got %d", len(skills))
 	}
 
 	want := map[string]bool{
 		"claude-code":                  false,
+		"codex-cli":                    false,
 		"co-brainstorm":               false,
 		"co-plan":                     false,
 		"co-validate":                 false,
 		"opencode":                     false,
 		"gemini-cli":                   false,
+		"handoff":                      false,
 		"brainstorming":                false,
 		"dispatching-parallel-agents":  false,
 		"executing-plans":              false,
