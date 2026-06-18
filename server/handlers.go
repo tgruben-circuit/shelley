@@ -583,6 +583,9 @@ func (s *Server) conversationMux() *http.ServeMux {
 	mux.HandleFunc("POST /{id}/critique", func(w http.ResponseWriter, r *http.Request) {
 		s.handleCritiqueConversation(w, r, r.PathValue("id"))
 	})
+	mux.HandleFunc("POST /{id}/orchestrate", func(w http.ResponseWriter, r *http.Request) {
+		s.handleOrchestrateConversation(w, r, r.PathValue("id"))
+	})
 	return mux
 }
 
