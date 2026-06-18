@@ -14,11 +14,11 @@ import (
 
 // Stage->model defaults. These are the REAL percy model IDs declared in
 // models/models.go. Do not use the placeholder literals from the task
-// description ("claude-opus-4-8", "accounts/fireworks/models/glm-5p2") —
+// description ("claude-opus-4-8", "glm-5.2-fireworks") —
 // they do not resolve and resolveModelID would reject them.
 const (
 	defaultPlannerModel  = "claude-opus-4.8"
-	defaultBuilderModel  = "glm-4p6-fireworks"
+	defaultBuilderModel  = "glm-5.2-fireworks"
 	defaultVerifierModel = "gpt-5.5"
 )
 

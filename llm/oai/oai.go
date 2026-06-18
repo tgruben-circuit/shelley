@@ -258,6 +258,13 @@ var (
 		APIKeyEnv: FireworksAPIKeyEnv,
 	}
 
+	GLM52Fireworks = Model{
+		UserName:  "glm-5.2-fireworks",
+		ModelName: "accounts/fireworks/models/glm-5p2",
+		URL:       FireworksURL,
+		APIKeyEnv: FireworksAPIKeyEnv,
+	}
+
 	KimiK2Fireworks = Model{
 		UserName:  "kimi-k2-fireworks",
 		ModelName: "accounts/fireworks/models/kimi-k2-instruct-0905",
