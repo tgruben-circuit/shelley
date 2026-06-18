@@ -9,6 +9,7 @@ import {
   VersionInfo,
   CommitInfo,
   PRResponse,
+  SearchHit,
 } from "../types";
 
 export class ApiError extends Error {
@@ -60,6 +61,15 @@ class ApiService {
     const response = await fetch(`${this.baseUrl}/conversations?${params}`);
     if (!response.ok) {
       throw new Error(`Failed to search conversations: ${response.statusText}`);
+    }
+    return response.json();
+  }
+
+  async searchMessages(query: string): Promise<SearchHit[]> {
+    const params = new URLSearchParams({ q: query });
+    const response = await fetch(`${this.baseUrl}/conversations/search?${params}`);
+    if (!response.ok) {
+      throw new Error(`Failed to search messages: ${response.statusText}`);
     }
     return response.json();
   }
