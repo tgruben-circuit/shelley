@@ -60,3 +60,6 @@ Thumbs.db
 
 # Local git worktrees
 .worktrees/
+
+# Local embedding model cache (downloaded at runtime)
+.fastembed_cache/
