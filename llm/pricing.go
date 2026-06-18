@@ -35,7 +35,6 @@ var knownPricing = map[string]modelPricing{
 	"gemini-3-flash-preview": {InputPerMillion: 0.15, OutputPerMillion: 0.60},
 
 	// Fireworks-hosted models (pay-per-token pricing)
-	"accounts/fireworks/models/qwen3-coder-480b-a35b-fp8":  {InputPerMillion: 0.90, OutputPerMillion: 0.90},
 	"accounts/fireworks/models/glm-4-7":                     {InputPerMillion: 0.90, OutputPerMillion: 0.90},
 	"accounts/fireworks/models/glm-4-0414-p6":               {InputPerMillion: 0.90, OutputPerMillion: 0.90},
 	"accounts/fireworks/models/kimi-k2-instruct":            {InputPerMillion: 0.90, OutputPerMillion: 0.90},
