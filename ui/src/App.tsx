@@ -567,8 +567,8 @@ function App() {
             startNewConversation();
             setCommandPaletteOpen(false);
           }}
-          onSelectConversation={(conversation) => {
-            selectConversation(conversation);
+          onSelectConversation={(conversation, targetMessageId) => {
+            selectConversation(conversation, targetMessageId);
             setCommandPaletteOpen(false);
           }}
           onOpenDiffViewer={() => {
