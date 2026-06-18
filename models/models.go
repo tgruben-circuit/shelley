@@ -301,23 +301,6 @@ func All() []Model {
 			},
 		},
 		{
-			ID:              "glm-4.7-fireworks",
-			Provider:        ProviderFireworks,
-			Description:     "GLM-4.7 on Fireworks",
-			RequiredEnvVars: []string{"FIREWORKS_API_KEY"},
-			GatewayEnabled:  true,
-			Factory: func(config *Config, httpc *http.Client) (llm.Service, error) {
-				if config.FireworksAPIKey == "" {
-					return nil, fmt.Errorf("glm-4.7-fireworks requires FIREWORKS_API_KEY")
-				}
-				svc := &oai.Service{Model: oai.GLM47Fireworks, APIKey: config.FireworksAPIKey, HTTPC: httpc}
-				if url := config.getFireworksURL(); url != "" {
-					svc.ModelURL = url
-				}
-				return svc, nil
-			},
-		},
-		{
 			ID:              "glm-5.2-fireworks",
 			Provider:        ProviderFireworks,
 			Description:     "GLM-5.2 on Fireworks",
@@ -380,57 +363,6 @@ func All() []Model {
 				}
 				svc := &oai.ResponsesService{Model: oai.GPT52Codex, APIKey: config.OpenAIAPIKey, HTTPC: httpc, ThinkingLevel: llm.ThinkingLevelMedium}
 				if url := config.getOpenAIURL(); url != "" {
-					svc.ModelURL = url
-				}
-				return svc, nil
-			},
-		},
-		{
-			ID:              "qwen3-coder-fireworks",
-			Provider:        ProviderFireworks,
-			Description:     "Qwen3 Coder 480B on Fireworks",
-			Tags:            "slug",
-			RequiredEnvVars: []string{"FIREWORKS_API_KEY"},
-			GatewayEnabled:  true,
-			Factory: func(config *Config, httpc *http.Client) (llm.Service, error) {
-				if config.FireworksAPIKey == "" {
-					return nil, fmt.Errorf("qwen3-coder-fireworks requires FIREWORKS_API_KEY")
-				}
-				svc := &oai.Service{Model: oai.Qwen3CoderFireworks, APIKey: config.FireworksAPIKey, HTTPC: httpc}
-				if url := config.getFireworksURL(); url != "" {
-					svc.ModelURL = url
-				}
-				return svc, nil
-			},
-		},
-		{
-			ID:              "glm-4p6-fireworks",
-			Provider:        ProviderFireworks,
-			Description:     "GLM-4P6 on Fireworks",
-			RequiredEnvVars: []string{"FIREWORKS_API_KEY"},
-			Factory: func(config *Config, httpc *http.Client) (llm.Service, error) {
-				if config.FireworksAPIKey == "" {
-					return nil, fmt.Errorf("glm-4p6-fireworks requires FIREWORKS_API_KEY")
-				}
-				svc := &oai.Service{Model: oai.GLM4P6Fireworks, APIKey: config.FireworksAPIKey, HTTPC: httpc}
-				if url := config.getFireworksURL(); url != "" {
-					svc.ModelURL = url
-				}
-				return svc, nil
-			},
-		},
-		{
-			ID:              "kimi-k2-fireworks",
-			Provider:        ProviderFireworks,
-			Description:     "Kimi K2 on Fireworks",
-			RequiredEnvVars: []string{"FIREWORKS_API_KEY"},
-			GatewayEnabled:  true,
-			Factory: func(config *Config, httpc *http.Client) (llm.Service, error) {
-				if config.FireworksAPIKey == "" {
-					return nil, fmt.Errorf("kimi-k2-fireworks requires FIREWORKS_API_KEY")
-				}
-				svc := &oai.Service{Model: oai.KimiK2Fireworks, APIKey: config.FireworksAPIKey, HTTPC: httpc}
-				if url := config.getFireworksURL(); url != "" {
 					svc.ModelURL = url
 				}
 				return svc, nil

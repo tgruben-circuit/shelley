@@ -35,7 +35,6 @@ func TestByID(t *testing.T) {
 		wantID  string
 		wantNil bool
 	}{
-		{id: "qwen3-coder-fireworks", wantID: "qwen3-coder-fireworks", wantNil: false},
 		{id: "gpt-5.2-codex", wantID: "gpt-5.2-codex", wantNil: false},
 		{id: "claude-sonnet-4.5", wantID: "claude-sonnet-4.5", wantNil: false},
 		{id: "claude-haiku-4.5", wantID: "claude-haiku-4.5", wantNil: false},
@@ -484,13 +483,13 @@ func TestGetModelSource(t *testing.T) {
 		{
 			name:    "fireworks with env var only",
 			cfg:     &Config{FireworksAPIKey: "test-key"},
-			modelID: "qwen3-coder-fireworks",
+			modelID: "glm-5.2-fireworks",
 			want:    "$FIREWORKS_API_KEY",
 		},
 		{
 			name:    "fireworks with gateway implicit key",
 			cfg:     &Config{Gateway: "https://gateway.example.com", FireworksAPIKey: "implicit"},
-			modelID: "qwen3-coder-fireworks",
+			modelID: "glm-5.2-fireworks",
 			want:    "exe.dev gateway",
 		},
 		{
@@ -548,7 +547,7 @@ func TestGetAvailableModelsUnion(t *testing.T) {
 	models := manager.GetAvailableModels()
 
 	// Should have anthropic models and fireworks models, plus predictable
-	expectedModels := []string{"claude-opus-4.8", "claude-fable-5", "claude-opus-4.7", "claude-opus-4.6", "claude-opus-4.5", "qwen3-coder-fireworks", "glm-4p6-fireworks", "claude-sonnet-4.6", "claude-sonnet-4.5", "claude-haiku-4.5", "predictable"}
+	expectedModels := []string{"claude-opus-4.8", "claude-fable-5", "claude-opus-4.7", "claude-opus-4.6", "claude-opus-4.5", "glm-5.2-fireworks", "claude-sonnet-4.6", "claude-sonnet-4.5", "claude-haiku-4.5", "predictable"}
 	for _, expected := range expectedModels {
 		found := false
 		for _, m := range models {

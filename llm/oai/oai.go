@@ -214,14 +214,6 @@ var (
 		APIKeyEnv: MistralAPIKeyEnv,
 	}
 
-	Qwen3CoderFireworks = Model{
-		UserName:           "qwen3-coder-fireworks",
-		ModelName:          "accounts/fireworks/models/qwen3-coder-480b-a35b-instruct",
-		URL:                FireworksURL,
-		APIKeyEnv:          FireworksAPIKeyEnv,
-		UseSimplifiedPatch: true,
-	}
-
 	Qwen3CoderCerebras = Model{
 		UserName:  "qwen3-coder-cerebras",
 		ModelName: "qwen-3-coder-480b",
@@ -229,45 +221,9 @@ var (
 		APIKeyEnv: CerebrasAPIKeyEnv,
 	}
 
-	Qwen3Coder30Fireworks = Model{
-		UserName:           "qwen3-coder-30-fireworks",
-		ModelName:          "accounts/fireworks/models/qwen3-30b-a3b",
-		URL:                FireworksURL,
-		APIKeyEnv:          FireworksAPIKeyEnv,
-		UseSimplifiedPatch: true,
-	}
-
-	ZaiGLM45CoderFireworks = Model{
-		UserName:  "zai-glm45-fireworks",
-		ModelName: "accounts/fireworks/models/glm-4p5",
-		URL:       FireworksURL,
-		APIKeyEnv: FireworksAPIKeyEnv,
-	}
-
-	GLM4P6Fireworks = Model{
-		UserName:  "glm-4p6-fireworks",
-		ModelName: "accounts/fireworks/models/glm-4p6",
-		URL:       FireworksURL,
-		APIKeyEnv: FireworksAPIKeyEnv,
-	}
-
-	GLM47Fireworks = Model{
-		UserName:  "glm-4.7-fireworks",
-		ModelName: "accounts/fireworks/models/glm-4p7",
-		URL:       FireworksURL,
-		APIKeyEnv: FireworksAPIKeyEnv,
-	}
-
 	GLM52Fireworks = Model{
 		UserName:  "glm-5.2-fireworks",
 		ModelName: "accounts/fireworks/models/glm-5p2",
-		URL:       FireworksURL,
-		APIKeyEnv: FireworksAPIKeyEnv,
-	}
-
-	KimiK2Fireworks = Model{
-		UserName:  "kimi-k2-fireworks",
-		ModelName: "accounts/fireworks/models/kimi-k2-instruct-0905",
 		URL:       FireworksURL,
 		APIKeyEnv: FireworksAPIKeyEnv,
 	}
@@ -391,12 +347,8 @@ var ModelsRegistry = []Model{
 	FireworksLlama4Maverick,
 	MistralMedium,
 	DevstralSmall,
-	Qwen3CoderFireworks,
-	Qwen3Coder30Fireworks,
 	Qwen3CoderCerebras,
-	ZaiGLM45CoderFireworks,
-	GLM4P6Fireworks,
-	GLM47Fireworks,
+	GLM52Fireworks,
 	GPTOSS120B,
 	GPTOSS20B,
 	// Skaband-supported models
@@ -780,14 +732,10 @@ func (s *Service) TokenContextWindow() int {
 		return 128000 // 128k for GPT-4o models
 	case "o3-2025-04-16", "o3-mini-2025-04-16":
 		return 200000 // 200k for O3 models
-	case "accounts/fireworks/models/qwen3-coder-480b-a35b-instruct":
-		return 256000 // 256k native context for Qwen3-Coder
-	case "glm", "zai-glm45-fireworks":
+	case "glm":
 		return 128000
-	case "qwen", "qwen3-coder-cerebras", "qwen3-coder-fireworks":
+	case "qwen", "qwen3-coder-cerebras":
 		return 256000 // 256k native context for Qwen3-Coder
-	case "accounts/fireworks/models/kimi-k2-instruct-0905":
-		return 128000
 	case "gpt-oss-20b", "gpt-oss-120b":
 		return 128000
 	case "gpt-5.1", "gpt-5.1-mini", "gpt-5.1-nano":
