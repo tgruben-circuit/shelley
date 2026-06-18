@@ -1,8 +1,11 @@
 package server
 
 import (
+	"context"
 	"strings"
 	"testing"
+
+	"github.com/tgruben-circuit/percy/db"
 )
 
 func TestExtractSnippet(t *testing.T) {
@@ -118,5 +121,39 @@ func TestMatchMessageText(t *testing.T) {
 
 	if got := matchMessageText("user", nil, nil); got != "" {
 		t.Fatalf("nil data = %q, want empty", got)
+	}
+}
+
+func TestSearchMessageHits(t *testing.T) {
+	database, cleanup := setupTestDB(t)
+	defer cleanup()
+	ctx := context.Background()
+
+	slug := "find-me"
+	conv, err := database.CreateConversation(ctx, &slug, true, nil, nil)
+	if err != nil {
+		t.Fatalf("CreateConversation: %v", err)
+	}
+
+	if _, err := database.CreateMessage(ctx, db.CreateMessageParams{
+		ConversationID: conv.ConversationID,
+		Type:           db.MessageTypeUser,
+		UserData:       map[string]any{"text": "please refactor the WIDGET module"},
+	}); err != nil {
+		t.Fatalf("CreateMessage: %v", err)
+	}
+
+	hits, err := database.SearchMessageHits(ctx, "widget", 50, 0)
+	if err != nil {
+		t.Fatalf("SearchMessageHits: %v", err)
+	}
+	if len(hits) != 1 {
+		t.Fatalf("got %d hits, want 1", len(hits))
+	}
+	if hits[0].ConversationID != conv.ConversationID {
+		t.Fatalf("ConversationID = %q, want %q", hits[0].ConversationID, conv.ConversationID)
+	}
+	if hits[0].MatchMessageID == "" {
+		t.Fatal("MatchMessageID is empty")
 	}
 }

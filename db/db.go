@@ -336,6 +336,26 @@ func (db *DB) SearchConversationsWithMessages(ctx context.Context, query string,
 	return conversations, err
 }
 
+// SearchMessageHits returns the most-recent matching user/agent message per
+// non-archived conversation. Results carry the matched message's id, type, and
+// raw user_data/llm_data so callers can build display snippets.
+func (db *DB) SearchMessageHits(ctx context.Context, query string, limit, offset int64) ([]generated.SearchMessageHitsRow, error) {
+	queryPtr := &query
+	var rows []generated.SearchMessageHitsRow
+	err := db.pool.Rx(ctx, func(ctx context.Context, rx *Rx) error {
+		q := generated.New(rx.Conn())
+		var err error
+		rows, err = q.SearchMessageHits(ctx, generated.SearchMessageHitsParams{
+			Column1: queryPtr,
+			Column2: queryPtr,
+			Limit:   limit,
+			Offset:  offset,
+		})
+		return err
+	})
+	return rows, err
+}
+
 // UpdateConversationSlug updates the slug of a conversation
 func (db *DB) UpdateConversationSlug(ctx context.Context, conversationID, slug string) (*generated.Conversation, error) {
 	var conversation generated.Conversation
