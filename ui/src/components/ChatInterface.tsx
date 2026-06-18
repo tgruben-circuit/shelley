@@ -567,10 +567,11 @@ function ChatInterface({
     const el = document.getElementById(`msg-${scrollToMessageId}`);
     if (!el) return;
     el.scrollIntoView({ block: "center", behavior: "smooth" });
+    el.classList.remove("message-flash");
+    void el.offsetWidth; // force reflow so re-selecting the same message restarts the animation
     el.classList.add("message-flash");
-    const timer = window.setTimeout(() => el.classList.remove("message-flash"), 2000);
+    el.addEventListener("animationend", () => el.classList.remove("message-flash"), { once: true });
     onScrolledToMessage?.();
-    return () => window.clearTimeout(timer);
   }, [scrollToMessageId, messages, onScrolledToMessage]);
 
   const [loading, setLoading] = useState(true);

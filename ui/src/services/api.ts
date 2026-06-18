@@ -53,18 +53,6 @@ class ApiService {
     return response.json();
   }
 
-  async searchConversations(query: string): Promise<ConversationWithState[]> {
-    const params = new URLSearchParams({
-      q: query,
-      search_content: "true",
-    });
-    const response = await fetch(`${this.baseUrl}/conversations?${params}`);
-    if (!response.ok) {
-      throw new Error(`Failed to search conversations: ${response.statusText}`);
-    }
-    return response.json();
-  }
-
   async searchMessages(query: string): Promise<SearchHit[]> {
     const params = new URLSearchParams({ q: query });
     const response = await fetch(`${this.baseUrl}/conversations/search?${params}`);

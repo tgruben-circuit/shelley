@@ -4320,7 +4320,7 @@ svg {
 
 @keyframes message-flash {
   0% {
-    background-color: var(--accent, #ffd54f);
+    background-color: var(--accent-color, #ffd54f);
   }
   100% {
     background-color: transparent;
@@ -4349,7 +4349,7 @@ svg {
   white-space: nowrap;
 }
 .command-palette-snippet mark {
-  background: var(--accent, #ffd54f);
+  background: var(--accent-color, #ffd54f);
   color: inherit;
   border-radius: 2px;
   padding: 0 1px;
