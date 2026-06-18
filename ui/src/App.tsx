@@ -116,6 +116,7 @@ function App() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerCollapsed, setDrawerCollapsed] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [pendingScrollMessageId, setPendingScrollMessageId] = useState<string | null>(null);
   const [diffViewerTrigger, setDiffViewerTrigger] = useState(0);
   const [modelsModalOpen, setModelsModalOpen] = useState(false);
   const [notificationsModalOpen, setNotificationsModalOpen] = useState(false);
@@ -342,9 +343,10 @@ function App() {
     setDrawerOpen(false);
   };
 
-  const selectConversation = (conversation: Conversation) => {
+  const selectConversation = (conversation: Conversation, targetMessageId?: string) => {
     setCurrentConversationId(conversation.conversation_id);
     setViewedConversation(conversation);
+    setPendingScrollMessageId(targetMessageId ?? null);
     setDrawerOpen(false);
   };
 
@@ -551,6 +553,8 @@ function App() {
             onReconnect={refreshConversations}
             ephemeralTerminals={ephemeralTerminals}
             setEphemeralTerminals={setEphemeralTerminals}
+            scrollToMessageId={pendingScrollMessageId}
+            onScrolledToMessage={() => setPendingScrollMessageId(null)}
           />
         </div>
 
