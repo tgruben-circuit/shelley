@@ -2,10 +2,17 @@ package server
 
 import (
 	"context"
+	"encoding/json"
+	"log/slog"
+	"net/http"
+	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 
+	"github.com/tgruben-circuit/percy/claudetool"
 	"github.com/tgruben-circuit/percy/db"
+	"github.com/tgruben-circuit/percy/loop"
 )
 
 func TestExtractSnippet(t *testing.T) {
@@ -155,5 +162,66 @@ func TestSearchMessageHits(t *testing.T) {
 	}
 	if hits[0].MatchMessageID == "" {
 		t.Fatal("MatchMessageID is empty")
+	}
+}
+
+// newSearchTestServer builds a Server mirroring NewTestHarness's constructor call.
+func newSearchTestServer(t *testing.T, database *db.DB) *Server {
+	t.Helper()
+	predictableService := loop.NewPredictableService()
+	llmManager := &testLLMManager{service: predictableService}
+	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelWarn}))
+	toolSetConfig := claudetool.ToolSetConfig{EnableBrowser: false}
+	return NewServer(database, llmManager, toolSetConfig, logger, true, "", "predictable", "", nil)
+}
+
+func TestHandleSearchMessages(t *testing.T) {
+	database, cleanup := setupTestDB(t)
+	defer cleanup()
+	ctx := context.Background()
+	srv := newSearchTestServer(t, database)
+
+	slug := "fruit-talk"
+	conv, err := database.CreateConversation(ctx, &slug, true, nil, nil)
+	if err != nil {
+		t.Fatalf("CreateConversation: %v", err)
+	}
+	if _, err := database.CreateMessage(ctx, db.CreateMessageParams{
+		ConversationID: conv.ConversationID,
+		Type:           db.MessageTypeUser,
+		UserData:       map[string]any{"text": "I really love PINEAPPLE on pizza"},
+	}); err != nil {
+		t.Fatalf("CreateMessage: %v", err)
+	}
+
+	// Missing q -> 400.
+	rec := httptest.NewRecorder()
+	srv.handleSearchMessages(rec, httptest.NewRequest(http.MethodGet, "/api/conversations/search?q=", nil))
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("empty q: got %d, want 400", rec.Code)
+	}
+
+	// Matching query -> 200 with one hit.
+	rec = httptest.NewRecorder()
+	srv.handleSearchMessages(rec, httptest.NewRequest(http.MethodGet, "/api/conversations/search?q=pineapple", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("query: got %d, want 200: %s", rec.Code, rec.Body.String())
+	}
+
+	var hits []SearchHit
+	if err := json.Unmarshal(rec.Body.Bytes(), &hits); err != nil {
+		t.Fatalf("unmarshal: %v (body=%s)", err, rec.Body.String())
+	}
+	if len(hits) != 1 {
+		t.Fatalf("got %d hits, want 1", len(hits))
+	}
+	if !strings.Contains(strings.ToLower(hits[0].Snippet), "pineapple") {
+		t.Fatalf("snippet %q does not contain pineapple", hits[0].Snippet)
+	}
+	if hits[0].MatchMessageID == "" {
+		t.Fatal("MatchMessageID is empty")
+	}
+	if len(hits[0].MatchRanges) != 1 {
+		t.Fatalf("got %d match ranges, want 1", len(hits[0].MatchRanges))
 	}
 }
