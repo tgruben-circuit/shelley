@@ -5,6 +5,7 @@ import {
   ApiMessageForTS,
   StreamResponseForTS,
   NotificationEventForTS,
+  SearchHitForTS,
   Usage as GeneratedUsage,
   MessageType as GeneratedMessageType,
   PRSummary as GeneratedPRSummary,
@@ -17,6 +18,7 @@ import {
 // Re-export generated types
 export type Conversation = GeneratedConversation;
 export type ConversationWithState = ConversationWithStateForTS;
+export type SearchHit = SearchHitForTS;
 export type Usage = GeneratedUsage;
 export type MessageType = GeneratedMessageType;
 

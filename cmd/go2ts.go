@@ -73,6 +73,7 @@ func TS() *go2ts.Go2TS {
 		streamResponseForTS{},
 		conversationWithStateForTS{},
 		notificationEventForTS{},
+		searchHitForTS{},
 	)
 
 	// GitHub PR status types
@@ -121,6 +122,13 @@ type conversationWithStateForTS struct {
 	Model                *string            `json:"model"`
 	Working              bool               `json:"working"`
 	PR                   *github.PRSummary  `json:"pr,omitempty"`
+}
+
+type searchHitForTS struct {
+	Conversation   conversationWithStateForTS `json:"conversation"`
+	MatchMessageID string                     `json:"match_message_id"`
+	Snippet        string                     `json:"snippet"`
+	MatchRanges    [][2]int                   `json:"match_ranges"`
 }
 
 type streamResponseForTS struct {
