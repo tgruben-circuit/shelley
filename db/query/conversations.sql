@@ -107,3 +107,27 @@ WHERE slug = ? AND parent_conversation_id = ?;
 UPDATE conversations
 SET model = ?
 WHERE conversation_id = ? AND model IS NULL;
+
+-- name: SearchMessageHits :many
+-- One best (most-recent) matching user/agent message per non-archived conversation.
+-- The keyword placeholder (?) appears twice; pass the same value for both.
+SELECT c.conversation_id, c.slug, c.user_initiated, c.created_at, c.updated_at,
+       c.cwd, c.archived, c.parent_conversation_id, c.model,
+       m.message_id AS match_message_id,
+       m.type       AS match_type,
+       m.user_data  AS match_user_data,
+       m.llm_data   AS match_llm_data
+FROM conversations c
+JOIN messages m ON m.conversation_id = c.conversation_id
+WHERE c.archived = FALSE
+  AND m.type IN ('user', 'agent')
+  AND m.message_id = (
+    SELECT m2.message_id FROM messages m2
+    WHERE m2.conversation_id = c.conversation_id
+      AND m2.type IN ('user', 'agent')
+      AND (json_extract(m2.user_data, '$.text') LIKE '%' || ? || '%'
+           OR m2.llm_data LIKE '%' || ? || '%')
+    ORDER BY m2.sequence_id DESC
+    LIMIT 1)
+ORDER BY c.updated_at DESC
+LIMIT ? OFFSET ?;

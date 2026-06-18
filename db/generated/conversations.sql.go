@@ -7,6 +7,7 @@ package generated
 
 import (
 	"context"
+	"time"
 )
 
 const archiveConversation = `-- name: ArchiveConversation :one
@@ -477,6 +478,96 @@ func (q *Queries) SearchConversationsWithMessages(ctx context.Context, arg Searc
 			&i.Archived,
 			&i.ParentConversationID,
 			&i.Model,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const searchMessageHits = `-- name: SearchMessageHits :many
+SELECT c.conversation_id, c.slug, c.user_initiated, c.created_at, c.updated_at,
+       c.cwd, c.archived, c.parent_conversation_id, c.model,
+       m.message_id AS match_message_id,
+       m.type       AS match_type,
+       m.user_data  AS match_user_data,
+       m.llm_data   AS match_llm_data
+FROM conversations c
+JOIN messages m ON m.conversation_id = c.conversation_id
+WHERE c.archived = FALSE
+  AND m.type IN ('user', 'agent')
+  AND m.message_id = (
+    SELECT m2.message_id FROM messages m2
+    WHERE m2.conversation_id = c.conversation_id
+      AND m2.type IN ('user', 'agent')
+      AND (json_extract(m2.user_data, '$.text') LIKE '%' || ? || '%'
+           OR m2.llm_data LIKE '%' || ? || '%')
+    ORDER BY m2.sequence_id DESC
+    LIMIT 1)
+ORDER BY c.updated_at DESC
+LIMIT ? OFFSET ?
+`
+
+type SearchMessageHitsParams struct {
+	Column1 *string `json:"column_1"`
+	Column2 *string `json:"column_2"`
+	Limit   int64   `json:"limit"`
+	Offset  int64   `json:"offset"`
+}
+
+type SearchMessageHitsRow struct {
+	ConversationID       string    `json:"conversation_id"`
+	Slug                 *string   `json:"slug"`
+	UserInitiated        bool      `json:"user_initiated"`
+	CreatedAt            time.Time `json:"created_at"`
+	UpdatedAt            time.Time `json:"updated_at"`
+	Cwd                  *string   `json:"cwd"`
+	Archived             bool      `json:"archived"`
+	ParentConversationID *string   `json:"parent_conversation_id"`
+	Model                *string   `json:"model"`
+	MatchMessageID       string    `json:"match_message_id"`
+	MatchType            string    `json:"match_type"`
+	MatchUserData        *string   `json:"match_user_data"`
+	MatchLlmData         *string   `json:"match_llm_data"`
+}
+
+// One best (most-recent) matching user/agent message per non-archived conversation.
+// The keyword placeholder (?) appears twice; pass the same value for both.
+func (q *Queries) SearchMessageHits(ctx context.Context, arg SearchMessageHitsParams) ([]SearchMessageHitsRow, error) {
+	rows, err := q.db.QueryContext(ctx, searchMessageHits,
+		arg.Column1,
+		arg.Column2,
+		arg.Limit,
+		arg.Offset,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []SearchMessageHitsRow{}
+	for rows.Next() {
+		var i SearchMessageHitsRow
+		if err := rows.Scan(
+			&i.ConversationID,
+			&i.Slug,
+			&i.UserInitiated,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Cwd,
+			&i.Archived,
+			&i.ParentConversationID,
+			&i.Model,
+			&i.MatchMessageID,
+			&i.MatchType,
+			&i.MatchUserData,
+			&i.MatchLlmData,
 		); err != nil {
 			return nil, err
 		}
