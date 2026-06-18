@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import { Conversation } from "../types";
+import { Conversation, SearchHit } from "../types";
 import { api } from "../services/api";
 
 interface CommandItem {
@@ -10,6 +10,8 @@ interface CommandItem {
   icon?: React.ReactNode;
   action: () => void;
   keywords?: string[]; // Additional keywords for search
+  snippet?: string;
+  matchRanges?: number[][];
 }
 
 interface CommandPaletteProps {
@@ -17,7 +19,7 @@ interface CommandPaletteProps {
   onClose: () => void;
   conversations: Conversation[];
   onNewConversation: () => void;
-  onSelectConversation: (conversation: Conversation) => void;
+  onSelectConversation: (conversation: Conversation, targetMessageId?: string) => void;
   onOpenDiffViewer: () => void;
   onOpenModelsModal: () => void;
   onOpenNotificationsModal: () => void;
@@ -59,6 +61,21 @@ function fuzzyMatch(query: string, text: string): number {
   return score;
 }
 
+function HighlightedSnippet({ text, ranges }: { text: string; ranges: number[][] }) {
+  const chars = Array.from(text);
+  if (!ranges || ranges.length === 0) return <>{text}</>;
+  const out: React.ReactNode[] = [];
+  let cursor = 0;
+  ranges.forEach(([start, end], i) => {
+    if (start > cursor)
+      out.push(<span key={`t${i}`}>{chars.slice(cursor, start).join("")}</span>);
+    out.push(<mark key={`m${i}`}>{chars.slice(start, end).join("")}</mark>);
+    cursor = end;
+  });
+  if (cursor < chars.length) out.push(<span key="tail">{chars.slice(cursor).join("")}</span>);
+  return <>{out}</>;
+}
+
 function CommandPalette({
   isOpen,
   onClose,
@@ -72,11 +89,25 @@ function CommandPalette({
 }: CommandPaletteProps) {
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [searchResults, setSearchResults] = useState<Conversation[]>([]);
+  const [searchResults, setSearchResults] = useState<SearchHit[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const searchTimeoutRef = useRef<number | null>(null);
+
+  const conversationIcon = useMemo(
+    () => (
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16">
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+        />
+      </svg>
+    ),
+    [],
+  );
 
   // Search conversations on the server
   const searchConversations = useCallback(async (searchQuery: string) => {
@@ -88,7 +119,7 @@ function CommandPalette({
 
     setIsSearching(true);
     try {
-      const results = await api.searchConversations(searchQuery);
+      const results = await api.searchMessages(searchQuery);
       setSearchResults(results);
     } catch (err) {
       console.error("Failed to search conversations:", err);
@@ -242,22 +273,13 @@ function CommandPalette({
       type: "conversation",
       title: conv.slug || conv.conversation_id,
       subtitle: conv.cwd || undefined,
-      icon: (
-        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16">
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-          />
-        </svg>
-      ),
+      icon: conversationIcon,
       action: () => {
         onSelectConversation(conv);
         onClose();
       },
     }),
-    [onSelectConversation, onClose],
+    [onSelectConversation, onClose, conversationIcon],
   );
 
   // Compute the final list of items to display
@@ -283,12 +305,36 @@ function CommandPalette({
       });
     }
 
-    // Use search results if we have a query, otherwise use initial conversations
-    const conversationsToShow = trimmedQuery ? searchResults : conversations;
-    const conversationItems = conversationsToShow.map(conversationToItem);
+    // Use search results (with snippets) if we have a query, otherwise initial conversations
+    const conversationItems = trimmedQuery
+      ? searchResults.map(
+          (hit): CommandItem => ({
+            id: `conv-${hit.conversation.conversation_id}`,
+            type: "conversation",
+            title: hit.conversation.slug || hit.conversation.conversation_id,
+            subtitle: hit.conversation.cwd || undefined,
+            icon: conversationIcon,
+            snippet: hit.snippet,
+            matchRanges: hit.match_ranges ?? undefined,
+            action: () => {
+              onSelectConversation(hit.conversation, hit.match_message_id);
+              onClose();
+            },
+          }),
+        )
+      : conversations.map(conversationToItem);
 
     return [...filteredActions, ...conversationItems];
-  }, [query, actionItems, searchResults, conversations, conversationToItem]);
+  }, [
+    query,
+    actionItems,
+    searchResults,
+    conversations,
+    conversationToItem,
+    conversationIcon,
+    onSelectConversation,
+    onClose,
+  ]);
 
   // Reset selection when items change
   useEffect(() => {
@@ -391,6 +437,11 @@ function CommandPalette({
                   <div className="command-palette-item-title">{item.title}</div>
                   {item.subtitle && (
                     <div className="command-palette-item-subtitle">{item.subtitle}</div>
+                  )}
+                  {item.snippet && (
+                    <div className="command-palette-snippet">
+                      <HighlightedSnippet text={item.snippet} ranges={item.matchRanges || []} />
+                    </div>
                   )}
                 </div>
                 {item.type === "action" && <div className="command-palette-item-badge">Action</div>}

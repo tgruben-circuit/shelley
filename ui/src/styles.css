@@ -4340,6 +4340,21 @@ svg {
   gap: 0.75rem;
 }
 
+.command-palette-snippet {
+  font-size: 12px;
+  color: var(--text-secondary, #888);
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.command-palette-snippet mark {
+  background: var(--accent, #ffd54f);
+  color: inherit;
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
 .command-palette-item:hover,
 .command-palette-item.selected {
   background: var(--bg-secondary);
