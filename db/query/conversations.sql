@@ -120,7 +120,6 @@ SELECT c.conversation_id, c.slug, c.user_initiated, c.created_at, c.updated_at,
 FROM conversations c
 JOIN messages m ON m.conversation_id = c.conversation_id
 WHERE c.archived = FALSE
-  AND m.type IN ('user', 'agent')
   AND m.message_id = (
     SELECT m2.message_id FROM messages m2
     WHERE m2.conversation_id = c.conversation_id

@@ -79,6 +79,8 @@ func matchMessageText(msgType string, userData, llmData *string) string {
 		if json.Unmarshal([]byte(*userData), &ud) == nil {
 			return ud.Text
 		}
+		// User messages never carry llm_data, so we return "" here rather than
+		// falling through to the llm_data path below.
 		return ""
 	}
 	if llmData != nil {

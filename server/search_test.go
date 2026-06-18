@@ -12,6 +12,7 @@ import (
 
 	"github.com/tgruben-circuit/percy/claudetool"
 	"github.com/tgruben-circuit/percy/db"
+	"github.com/tgruben-circuit/percy/llm"
 	"github.com/tgruben-circuit/percy/loop"
 )
 
@@ -120,8 +121,20 @@ func TestMatchMessageText(t *testing.T) {
 		t.Fatalf("user text = %q", got)
 	}
 
-	// ContentTypeText marshals as 2 (see llm.ContentType iota: tool_use=0, text=2).
-	llmData := `{"Role":0,"Content":[{"Type":2,"Text":"first"},{"Type":2,"Text":"second"}]}`
+	// Build the llm_data fixture by marshaling a real llm.Message so the test
+	// can't rot if the ContentType enum order changes.
+	msg := llm.Message{
+		Role: llm.MessageRoleAssistant,
+		Content: []llm.Content{
+			{Type: llm.ContentTypeText, Text: "first"},
+			{Type: llm.ContentTypeText, Text: "second"},
+		},
+	}
+	msgJSON, err := json.Marshal(msg)
+	if err != nil {
+		t.Fatalf("marshal llm.Message: %v", err)
+	}
+	llmData := string(msgJSON)
 	if got := matchMessageText("agent", nil, &llmData); got != "first\nsecond" {
 		t.Fatalf("agent text = %q", got)
 	}
@@ -162,6 +175,67 @@ func TestSearchMessageHits(t *testing.T) {
 	}
 	if hits[0].MatchMessageID == "" {
 		t.Fatal("MatchMessageID is empty")
+	}
+}
+
+// TestSearchMessageHitsAgentMatch locks in that agent (llm_data) text matches
+// produce a real highlight, end to end through the handler.
+func TestSearchMessageHitsAgentMatch(t *testing.T) {
+	database, cleanup := setupTestDB(t)
+	defer cleanup()
+	ctx := context.Background()
+	srv := newSearchTestServer(t, database)
+
+	slug := "agent-talk"
+	conv, err := database.CreateConversation(ctx, &slug, true, nil, nil)
+	if err != nil {
+		t.Fatalf("CreateConversation: %v", err)
+	}
+
+	// CreateMessage JSON-marshals LLMData, so pass a real llm.Message value.
+	llmMsg := llm.Message{
+		Role: llm.MessageRoleAssistant,
+		Content: []llm.Content{
+			{Type: llm.ContentTypeText, Text: "the agent discusses the FLUX capacitor"},
+		},
+	}
+	if _, err := database.CreateMessage(ctx, db.CreateMessageParams{
+		ConversationID: conv.ConversationID,
+		Type:           db.MessageTypeAgent,
+		LLMData:        llmMsg,
+	}); err != nil {
+		t.Fatalf("CreateMessage: %v", err)
+	}
+
+	hits, err := database.SearchMessageHits(ctx, "flux", 50, 0)
+	if err != nil {
+		t.Fatalf("SearchMessageHits: %v", err)
+	}
+	if len(hits) != 1 {
+		t.Fatalf("got %d hits, want 1", len(hits))
+	}
+	if hits[0].ConversationID != conv.ConversationID {
+		t.Fatalf("ConversationID = %q, want %q", hits[0].ConversationID, conv.ConversationID)
+	}
+
+	// Through the handler: agent text match yields a snippet with one highlight.
+	rec := httptest.NewRecorder()
+	srv.handleSearchMessages(rec, httptest.NewRequest(http.MethodGet, "/api/conversations/search?q=flux", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("query: got %d, want 200: %s", rec.Code, rec.Body.String())
+	}
+	var searchHits []SearchHit
+	if err := json.Unmarshal(rec.Body.Bytes(), &searchHits); err != nil {
+		t.Fatalf("unmarshal: %v (body=%s)", err, rec.Body.String())
+	}
+	if len(searchHits) != 1 {
+		t.Fatalf("got %d hits, want 1", len(searchHits))
+	}
+	if !strings.Contains(strings.ToLower(searchHits[0].Snippet), "flux") {
+		t.Fatalf("snippet %q does not contain flux", searchHits[0].Snippet)
+	}
+	if len(searchHits[0].MatchRanges) != 1 {
+		t.Fatalf("got %d match ranges, want 1", len(searchHits[0].MatchRanges))
 	}
 }
 
