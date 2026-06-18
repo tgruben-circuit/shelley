@@ -318,6 +318,108 @@ func All() []Model {
 			},
 		},
 		{
+			ID:              "glm-5.1-fireworks",
+			Provider:        ProviderFireworks,
+			Description:     "GLM-5.1 on Fireworks",
+			RequiredEnvVars: []string{"FIREWORKS_API_KEY"},
+			GatewayEnabled:  true,
+			Factory: func(config *Config, httpc *http.Client) (llm.Service, error) {
+				if config.FireworksAPIKey == "" {
+					return nil, fmt.Errorf("glm-5.1-fireworks requires FIREWORKS_API_KEY")
+				}
+				svc := &oai.Service{Model: oai.GLM51Fireworks, APIKey: config.FireworksAPIKey, HTTPC: httpc}
+				if url := config.getFireworksURL(); url != "" {
+					svc.ModelURL = url
+				}
+				return svc, nil
+			},
+		},
+		{
+			ID:              "deepseek-v4-pro-fireworks",
+			Provider:        ProviderFireworks,
+			Description:     "DeepSeek V4 Pro on Fireworks",
+			RequiredEnvVars: []string{"FIREWORKS_API_KEY"},
+			GatewayEnabled:  true,
+			Factory: func(config *Config, httpc *http.Client) (llm.Service, error) {
+				if config.FireworksAPIKey == "" {
+					return nil, fmt.Errorf("deepseek-v4-pro-fireworks requires FIREWORKS_API_KEY")
+				}
+				svc := &oai.Service{Model: oai.DeepseekV4ProFireworks, APIKey: config.FireworksAPIKey, HTTPC: httpc}
+				if url := config.getFireworksURL(); url != "" {
+					svc.ModelURL = url
+				}
+				return svc, nil
+			},
+		},
+		{
+			ID:              "deepseek-v4-flash-fireworks",
+			Provider:        ProviderFireworks,
+			Description:     "DeepSeek V4 Flash on Fireworks",
+			RequiredEnvVars: []string{"FIREWORKS_API_KEY"},
+			GatewayEnabled:  true,
+			Factory: func(config *Config, httpc *http.Client) (llm.Service, error) {
+				if config.FireworksAPIKey == "" {
+					return nil, fmt.Errorf("deepseek-v4-flash-fireworks requires FIREWORKS_API_KEY")
+				}
+				svc := &oai.Service{Model: oai.DeepseekV4FlashFireworks, APIKey: config.FireworksAPIKey, HTTPC: httpc}
+				if url := config.getFireworksURL(); url != "" {
+					svc.ModelURL = url
+				}
+				return svc, nil
+			},
+		},
+		{
+			ID:              "kimi-k2.7-code-fireworks",
+			Provider:        ProviderFireworks,
+			Description:     "Kimi K2.7 Code on Fireworks",
+			RequiredEnvVars: []string{"FIREWORKS_API_KEY"},
+			GatewayEnabled:  true,
+			Factory: func(config *Config, httpc *http.Client) (llm.Service, error) {
+				if config.FireworksAPIKey == "" {
+					return nil, fmt.Errorf("kimi-k2.7-code-fireworks requires FIREWORKS_API_KEY")
+				}
+				svc := &oai.Service{Model: oai.KimiK27CodeFireworks, APIKey: config.FireworksAPIKey, HTTPC: httpc}
+				if url := config.getFireworksURL(); url != "" {
+					svc.ModelURL = url
+				}
+				return svc, nil
+			},
+		},
+		{
+			ID:              "kimi-k2.6-fireworks",
+			Provider:        ProviderFireworks,
+			Description:     "Kimi K2.6 on Fireworks",
+			RequiredEnvVars: []string{"FIREWORKS_API_KEY"},
+			GatewayEnabled:  true,
+			Factory: func(config *Config, httpc *http.Client) (llm.Service, error) {
+				if config.FireworksAPIKey == "" {
+					return nil, fmt.Errorf("kimi-k2.6-fireworks requires FIREWORKS_API_KEY")
+				}
+				svc := &oai.Service{Model: oai.KimiK26Fireworks, APIKey: config.FireworksAPIKey, HTTPC: httpc}
+				if url := config.getFireworksURL(); url != "" {
+					svc.ModelURL = url
+				}
+				return svc, nil
+			},
+		},
+		{
+			ID:              "kimi-k2.5-fireworks",
+			Provider:        ProviderFireworks,
+			Description:     "Kimi K2.5 on Fireworks",
+			RequiredEnvVars: []string{"FIREWORKS_API_KEY"},
+			GatewayEnabled:  true,
+			Factory: func(config *Config, httpc *http.Client) (llm.Service, error) {
+				if config.FireworksAPIKey == "" {
+					return nil, fmt.Errorf("kimi-k2.5-fireworks requires FIREWORKS_API_KEY")
+				}
+				svc := &oai.Service{Model: oai.KimiK25Fireworks, APIKey: config.FireworksAPIKey, HTTPC: httpc}
+				if url := config.getFireworksURL(); url != "" {
+					svc.ModelURL = url
+				}
+				return svc, nil
+			},
+		},
+		{
 			ID:              "gpt-5.5",
 			Provider:        ProviderOpenAI,
 			Description:     "GPT-5.5",

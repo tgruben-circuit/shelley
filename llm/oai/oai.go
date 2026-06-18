@@ -228,6 +228,48 @@ var (
 		APIKeyEnv: FireworksAPIKeyEnv,
 	}
 
+	GLM51Fireworks = Model{
+		UserName:  "glm-5.1-fireworks",
+		ModelName: "accounts/fireworks/models/glm-5p1",
+		URL:       FireworksURL,
+		APIKeyEnv: FireworksAPIKeyEnv,
+	}
+
+	DeepseekV4ProFireworks = Model{
+		UserName:  "deepseek-v4-pro-fireworks",
+		ModelName: "accounts/fireworks/models/deepseek-v4-pro",
+		URL:       FireworksURL,
+		APIKeyEnv: FireworksAPIKeyEnv,
+	}
+
+	DeepseekV4FlashFireworks = Model{
+		UserName:  "deepseek-v4-flash-fireworks",
+		ModelName: "accounts/fireworks/models/deepseek-v4-flash",
+		URL:       FireworksURL,
+		APIKeyEnv: FireworksAPIKeyEnv,
+	}
+
+	KimiK27CodeFireworks = Model{
+		UserName:  "kimi-k2.7-code-fireworks",
+		ModelName: "accounts/fireworks/models/kimi-k2p7-code",
+		URL:       FireworksURL,
+		APIKeyEnv: FireworksAPIKeyEnv,
+	}
+
+	KimiK26Fireworks = Model{
+		UserName:  "kimi-k2.6-fireworks",
+		ModelName: "accounts/fireworks/models/kimi-k2p6",
+		URL:       FireworksURL,
+		APIKeyEnv: FireworksAPIKeyEnv,
+	}
+
+	KimiK25Fireworks = Model{
+		UserName:  "kimi-k2.5-fireworks",
+		ModelName: "accounts/fireworks/models/kimi-k2p5",
+		URL:       FireworksURL,
+		APIKeyEnv: FireworksAPIKeyEnv,
+	}
+
 	GPTOSS20B = Model{
 		UserName:  "gpt-oss-20b",
 		ModelName: "accounts/fireworks/models/gpt-oss-20b",
@@ -349,6 +391,12 @@ var ModelsRegistry = []Model{
 	DevstralSmall,
 	Qwen3CoderCerebras,
 	GLM52Fireworks,
+	GLM51Fireworks,
+	DeepseekV4ProFireworks,
+	DeepseekV4FlashFireworks,
+	KimiK27CodeFireworks,
+	KimiK26Fireworks,
+	KimiK25Fireworks,
 	GPTOSS120B,
 	GPTOSS20B,
 	// Skaband-supported models
