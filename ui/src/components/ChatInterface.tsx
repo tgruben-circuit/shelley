@@ -531,6 +531,8 @@ interface ChatInterfaceProps {
   onReconnect?: () => void;
   ephemeralTerminals: EphemeralTerminal[];
   setEphemeralTerminals: React.Dispatch<React.SetStateAction<EphemeralTerminal[]>>;
+  scrollToMessageId?: string | null;
+  onScrolledToMessage?: () => void;
 }
 
 function ChatInterface({
@@ -555,8 +557,22 @@ function ChatInterface({
   onReconnect,
   ephemeralTerminals,
   setEphemeralTerminals,
+  scrollToMessageId,
+  onScrolledToMessage,
 }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([]);
+
+  useEffect(() => {
+    if (!scrollToMessageId) return;
+    const el = document.getElementById(`msg-${scrollToMessageId}`);
+    if (!el) return;
+    el.scrollIntoView({ block: "center", behavior: "smooth" });
+    el.classList.add("message-flash");
+    const timer = window.setTimeout(() => el.classList.remove("message-flash"), 2000);
+    onScrolledToMessage?.();
+    return () => window.clearTimeout(timer);
+  }, [scrollToMessageId, messages, onScrolledToMessage]);
+
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [switchingModel, setSwitchingModel] = useState(false);
@@ -1566,19 +1582,20 @@ function ChatInterface({
     const rendered = coalescedItems.map((item, index) => {
       if (item.type === "message" && item.message) {
         return (
-          <MessageComponent
-            key={item.message.message_id}
-            message={item.message}
-            onOpenDiffViewer={(commit, cwd) => {
-              setDiffViewerInitialCommit(commit);
-              setDiffViewerCwd(cwd);
-              setShowDiffViewer(true);
-            }}
-            onCommentTextChange={setDiffCommentText}
-            onFork={onForkConversation ? handleForkConversation : undefined}
-            onEdit={(sequenceId, text) => setEditingMessage({ sequenceId, text })}
-            onRegenerate={handleRegenerate}
-          />
+          <div key={item.message.message_id} id={`msg-${item.message.message_id}`}>
+            <MessageComponent
+              message={item.message}
+              onOpenDiffViewer={(commit, cwd) => {
+                setDiffViewerInitialCommit(commit);
+                setDiffViewerCwd(cwd);
+                setShowDiffViewer(true);
+              }}
+              onCommentTextChange={setDiffCommentText}
+              onFork={onForkConversation ? handleForkConversation : undefined}
+              onEdit={(sequenceId, text) => setEditingMessage({ sequenceId, text })}
+              onRegenerate={handleRegenerate}
+            />
+          </div>
         );
       } else if (item.type === "tool") {
         return (

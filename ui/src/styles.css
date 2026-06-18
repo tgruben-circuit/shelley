@@ -4318,6 +4318,19 @@ svg {
   color: var(--text-secondary);
 }
 
+@keyframes message-flash {
+  0% {
+    background-color: var(--accent, #ffd54f);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+.message-flash {
+  animation: message-flash 2s ease-out;
+  border-radius: 6px;
+}
+
 .command-palette-item {
   display: flex;
   align-items: center;
