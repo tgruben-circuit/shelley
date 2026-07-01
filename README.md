@@ -134,6 +134,16 @@ A companion to the bash tool for long-running commands. Instead of hard-killing 
 
 Conversations can be tagged for organization. Tags are stored as a JSON array on the conversation and rendered as chips in the drawer, with an inline add/remove editor next to the rename and archive actions. Tag input is normalized on the server (trimmed, de-duplicated, order-preserving).
 
+### Orchestration Tool
+
+For larger goals — multi-step features or refactors that benefit from decomposition — the agent can invoke the `orchestrate` tool to run a structured **planner → builders → verifier** pipeline mid-conversation:
+
+- A **planner** model breaks the goal into batches of independent tasks.
+- **Builder** subagents implement the tasks (up to 4 in parallel per batch).
+- A **verifier** model checks the result against the original goal.
+
+Each stage runs in its own subagent conversation and can use a different model via per-stage overrides (`planner_model`, `builder_model`, `verifier_model`), so you can pair a strong reasoning model for planning with faster models for building. The verifier stage is optional. Registered for top-level conversations only, consistent with the subagent depth limit.
+
 ### Resilient LLM Retries
 
 All four provider backends (Anthropic, OpenAI, Gemini, and the OpenAI Responses API) honor the `Retry-After` header on `429` and `5xx` responses, backing off for at least the server-requested delay instead of a fixed schedule. The Gemini client surfaces a structured API error carrying the status code and headers so retries are status-driven rather than string-matched.
