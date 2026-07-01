@@ -59,6 +59,9 @@ type ToolSetConfig struct {
 	SubagentRunner SubagentRunner
 	// SubagentDB is the database for subagent conversations.
 	SubagentDB SubagentDB
+	// OrchestrateRunner runs the planner->builders->verifier pipeline.
+	// If set, the orchestrate tool is available to top-level conversations.
+	OrchestrateRunner OrchestrateRunner
 	// ParentConversationID is the ID of the parent conversation (for subagent tool).
 	ParentConversationID string
 	// ConversationID is the ID of the conversation these tools belong to.
@@ -188,6 +191,18 @@ func NewToolSet(ctx context.Context, cfg ToolSetConfig) *ToolSet {
 		subTool := subagentTool.Tool()
 		subTool.Concurrent = true
 		tools = append(tools, subTool)
+	}
+
+	// Register orchestrate tool for top-level conversations only. Orchestration
+	// spawns subagents, so it must not run from within a subagent (which would
+	// exceed MaxSubagentDepth).
+	if cfg.OrchestrateRunner != nil && cfg.ParentConversationID != "" && cfg.SubagentDepth == 0 {
+		orchestrateTool := &OrchestrateTool{
+			ParentConversationID: cfg.ParentConversationID,
+			WorkingDir:           wd,
+			Runner:               cfg.OrchestrateRunner,
+		}
+		tools = append(tools, orchestrateTool.Tool())
 	}
 
 	// Register todo_write tool. Todo verification is top-level only to avoid

@@ -468,6 +468,60 @@ func clampConcurrency(n int) int {
 	return n
 }
 
+// OrchestrateRunner implements claudetool.OrchestrateRunner, letting the agent
+// trigger the pipeline from chat via the orchestrate tool.
+type OrchestrateRunner struct {
+	server *Server
+}
+
+// NewOrchestrateRunner creates a new OrchestrateRunner.
+func NewOrchestrateRunner(s *Server) *OrchestrateRunner {
+	return &OrchestrateRunner{server: s}
+}
+
+// RunOrchestration implements claudetool.OrchestrateRunner. It runs the
+// pipeline and returns a concise text summary for the tool result.
+func (r *OrchestrateRunner) RunOrchestration(ctx context.Context, parentConversationID, cwd, goal string, opts claudetool.OrchestrateOptions) (string, error) {
+	result, err := r.server.runOrchestration(ctx, parentConversationID, cwd, goal, orchestrateOptions{
+		PlannerModel:   opts.PlannerModel,
+		BuilderModel:   opts.BuilderModel,
+		VerifierModel:  opts.VerifierModel,
+		MaxConcurrency: opts.MaxConcurrency,
+		SkipVerify:     opts.SkipVerify,
+	})
+	if err != nil {
+		return "", err
+	}
+	return summarizeOrchestration(result), nil
+}
+
+// summarizeOrchestration renders an orchestrateResult as a readable summary.
+func summarizeOrchestration(res orchestrateResult) string {
+	var sb strings.Builder
+	fmt.Fprintf(&sb, "Orchestration complete for goal: %s\n\n", res.Goal)
+	for _, b := range res.Batches {
+		fmt.Fprintf(&sb, "Batch %s (%s):\n", b.ID, b.Mode)
+		for _, t := range b.Tasks {
+			fmt.Fprintf(&sb, "  - task %s: %s\n", t.ID, t.Status)
+		}
+	}
+	if res.Verifier.Skipped {
+		sb.WriteString("\nVerifier: skipped\n")
+	} else if res.Verifier.Verdict != "" {
+		fmt.Fprintf(&sb, "\nVerifier verdict: %s\n", res.Verifier.Verdict)
+	}
+	if len(res.Errors) > 0 {
+		sb.WriteString("\nErrors:\n")
+		for _, e := range res.Errors {
+			fmt.Fprintf(&sb, "  - %s\n", e)
+		}
+	}
+	return sb.String()
+}
+
+// Ensure OrchestrateRunner implements claudetool.OrchestrateRunner.
+var _ claudetool.OrchestrateRunner = (*OrchestrateRunner)(nil)
+
 // orchestrateRequest is the JSON body for POST /api/conversation/{id}/orchestrate.
 type orchestrateRequest struct {
 	Goal           string `json:"goal"`
