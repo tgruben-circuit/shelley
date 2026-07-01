@@ -15,6 +15,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"testing"
 	"time"
 
 	"tailscale.com/util/singleflight"
@@ -260,6 +261,11 @@ type Server struct {
 	// poller only broadcasts on change. Guarded by mu. Also read by the list
 	// handler to fill ConversationWithState.PR without blocking on gh.
 	lastPRSummary map[string]github.PRSummary
+
+	// hooksDir is the directory searched for user hook scripts
+	// ($HOME/.config/percy/hooks). Empty disables hooks; tests default it to
+	// empty for isolation from the developer's real hooks.
+	hooksDir string
 }
 
 // NewServer creates a new server instance
@@ -281,6 +287,11 @@ func NewServer(database *db.DB, llmManager LLMProvider, toolSetConfig claudetool
 		indexQueue:          make(chan string, 64),
 		prCache:             github.NewCache(),
 		lastPRSummary:       make(map[string]github.PRSummary),
+		hooksDir:            defaultHooksDir(),
+	}
+	// Isolate tests from the developer's real user hooks.
+	if testing.Testing() {
+		s.hooksDir = ""
 	}
 	go s.indexWorker()
 
@@ -879,6 +890,7 @@ func (s *Server) getOrCreateConversationManager(ctx context.Context, conversatio
 		}
 
 		manager := NewConversationManager(conversationID, s.db, s.memoryDB, s.embedder, s.logger, s.toolSetConfig, recordMessage, onStateChange, s.EnqueueIndex)
+		manager.hooksDir = s.hooksDir
 		if err := manager.Hydrate(ctx); err != nil {
 			return nil, err
 		}
@@ -922,6 +934,7 @@ func (s *Server) getOrCreateSubagentConversationManager(ctx context.Context, con
 		subagentConfig.SubagentDepth = s.toolSetConfig.SubagentDepth + 1
 
 		manager := NewConversationManager(conversationID, s.db, s.memoryDB, s.embedder, s.logger, subagentConfig, recordMessage, onStateChange, s.EnqueueIndex)
+		manager.hooksDir = s.hooksDir
 		if err := manager.Hydrate(ctx); err != nil {
 			return nil, err
 		}
@@ -1200,6 +1213,23 @@ func (s *Server) publishConversationState(state ConversationState) {
 		}
 		s.notifDispatcher.Dispatch(context.Background(), event)
 		notifEvent = &event
+
+		// Fire the end-of-turn user hook (fire-and-forget; the turn is already
+		// over, so failures are only logged).
+		if s.hooksDir != "" {
+			go func() {
+				if err := RunEndOfTurnHookIn(s.hooksDir, EndOfTurnHookInput{
+					Type:           string(notifications.EventAgentDone),
+					ConversationID: state.ConversationID,
+					Timestamp:      event.Timestamp,
+					Model:          payload.Model,
+					Slug:           payload.ConversationTitle,
+					FinalResponse:  payload.FinalResponse,
+				}); err != nil {
+					s.logger.Warn("end-of-turn hook failed", "conversationID", state.ConversationID, "error", err)
+				}
+			}()
+		}
 	}
 
 	s.mu.Lock()

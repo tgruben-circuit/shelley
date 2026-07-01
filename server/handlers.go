@@ -819,6 +819,22 @@ func (s *Server) handleChatConversation(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 
+	// chat-message hook: allow a user hook to rewrite a follow-up message.
+	rewritten, err := RunChatMessageHookIn(s.hooksDir, ChatMessageHookInput{
+		Message: req.Message,
+		Readonly: ChatMessageReadonly{
+			ConversationID: conversationID,
+			Model:          modelID,
+			Headers:        HookHeaders(r.Header),
+		},
+	})
+	if err != nil {
+		s.logger.Error("chat-message hook failed", "conversationID", conversationID, "error", err)
+		http.Error(w, "chat-message hook failed", http.StatusInternalServerError)
+		return
+	}
+	req.Message = rewritten
+
 	// Get or create conversation manager
 	manager, err := s.getOrCreateConversationManager(ctx, conversationID)
 	if errors.Is(err, errConversationModelMismatch) {
@@ -889,6 +905,25 @@ func (s *Server) handleNewConversation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// new-conversation hook: allow a user hook to rewrite the prompt, model,
+	// cwd, or provide a slug before the conversation is created.
+	hookResult, err := RunNewConversationHookIn(s.hooksDir, NewConversationHookInput{
+		Prompt: req.Message,
+		Model:  req.Model,
+		Cwd:    req.Cwd,
+		Readonly: NewConversationReadonly{
+			Headers: HookHeaders(r.Header),
+		},
+	})
+	if err != nil {
+		s.logger.Error("new-conversation hook failed", "error", err)
+		http.Error(w, "new-conversation hook failed", http.StatusInternalServerError)
+		return
+	}
+	req.Message = hookResult.Prompt
+	req.Model = hookResult.Model
+	req.Cwd = hookResult.Cwd
+
 	// Get LLM service for the requested model
 	modelID := req.Model
 	if modelID == "" {
@@ -897,7 +932,7 @@ func (s *Server) handleNewConversation(w http.ResponseWriter, r *http.Request) {
 	if modelID == "" {
 		modelID = models.Default().ID
 	}
-	modelID, err := s.resolveModelID(modelID)
+	modelID, err = s.resolveModelID(modelID)
 	if err != nil {
 		s.logger.Error("Unsupported model requested", "model", modelID, "error", err)
 		http.Error(w, fmt.Sprintf("Unsupported model: %s", modelID), http.StatusBadRequest)
@@ -923,6 +958,20 @@ func (s *Server) handleNewConversation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	conversationID := conversation.ConversationID
+
+	// If the new-conversation hook supplied a slug, use it and skip the async
+	// LLM-generated slug. Fall back to async generation on empty/colliding slug.
+	hookSlugApplied := false
+	if hookResult.Slug != "" {
+		if sanitized := slug.Sanitize(hookResult.Slug); sanitized != "" {
+			if updated, uerr := s.db.UpdateConversationSlug(ctx, conversationID, sanitized); uerr == nil {
+				conversation = updated
+				hookSlugApplied = true
+			} else {
+				s.logger.Warn("new-conversation hook slug rejected, falling back to generated slug", "conversationID", conversationID, "error", uerr)
+			}
+		}
+	}
 
 	// Notify conversation list subscribers about the new conversation
 	go s.publishConversationListUpdate(ConversationListUpdate{
@@ -961,7 +1010,7 @@ func (s *Server) handleNewConversation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if firstMessage {
+	if firstMessage && !hookSlugApplied {
 		ctxNoCancel := context.WithoutCancel(ctx)
 		go func() {
 			slugCtx, cancel := context.WithTimeout(ctxNoCancel, 15*time.Second)

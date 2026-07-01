@@ -44,6 +44,7 @@ type ConversationManager struct {
 	hydrated              bool
 	hasConversationEvents bool
 	cwd                   string // working directory for tools
+	hooksDir              string // user hooks directory; empty disables hooks
 
 	// agentWorking tracks whether the agent is currently working.
 	// This is explicitly managed and broadcast to subscribers when it changes.
@@ -266,6 +267,10 @@ func (cm *ConversationManager) createSystemPrompt(ctx context.Context) (*generat
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate system prompt: %w", err)
 	}
+	systemPrompt, err = RunSystemPromptHookIn(cm.hooksDir, systemPrompt)
+	if err != nil {
+		return nil, fmt.Errorf("system-prompt hook failed: %w", err)
+	}
 
 	if systemPrompt == "" {
 		cm.logger.Info("Skipping empty system prompt generation")
@@ -301,6 +306,10 @@ func (cm *ConversationManager) createSubagentSystemPrompt(ctx context.Context) (
 	systemPrompt, err := GenerateSubagentSystemPrompt(cm.cwd)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate subagent system prompt: %w", err)
+	}
+	systemPrompt, err = RunSystemPromptHookIn(cm.hooksDir, systemPrompt)
+	if err != nil {
+		return nil, fmt.Errorf("system-prompt hook failed: %w", err)
 	}
 
 	if systemPrompt == "" {
