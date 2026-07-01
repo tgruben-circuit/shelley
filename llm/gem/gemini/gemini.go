@@ -33,6 +33,19 @@ func (r *Response) Header() http.Header {
 	return r.headers
 }
 
+// APIError is a structured error returned by GenerateContent on a non-200
+// response. It carries the HTTP status code and response headers so callers
+// can implement retry logic (e.g. honoring a Retry-After header).
+type APIError struct {
+	StatusCode int
+	Header     http.Header
+	Body       string
+}
+
+func (e *APIError) Error() string {
+	return fmt.Sprintf("GenerateContent: HTTP status: %d, %s", e.StatusCode, e.Body)
+}
+
 type Candidate struct {
 	Content Content `json:"content"`
 }
@@ -168,7 +181,7 @@ func (m Model) GenerateContent(ctx context.Context, req *Request) (*Response, er
 		return nil, fmt.Errorf("GenerateContent: reading response body: %w", err)
 	}
 	if httpResp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("GenerateContent: HTTP status: %d, %s", httpResp.StatusCode, string(body))
+		return nil, &APIError{StatusCode: httpResp.StatusCode, Header: httpResp.Header, Body: string(body)}
 	}
 	var res Response
 	if err := json.Unmarshal(body, &res); err != nil {

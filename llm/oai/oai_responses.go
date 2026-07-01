@@ -430,16 +430,21 @@ func (s *ResponsesService) Do(ctx context.Context, ir *llm.Request) (*llm.Respon
 	backoff := []time.Duration{1 * time.Second, 2 * time.Second, 5 * time.Second, 10 * time.Second, 15 * time.Second}
 
 	// retry loop
-	var errs error // accumulated errors across all attempts
+	var errs error               // accumulated errors across all attempts
+	var retryAfter time.Duration // honored from a Retry-After header, if present
 	for attempts := 0; ; attempts++ {
 		if attempts > 10 {
 			return nil, fmt.Errorf("responses request failed after %d attempts (url=%s, model=%s): %w", attempts, fullURL, model.ModelName, errs)
 		}
 		if attempts > 0 {
 			sleep := backoff[min(attempts, len(backoff)-1)] + time.Duration(rand.Int64N(int64(time.Second)))
+			if retryAfter > sleep {
+				sleep = retryAfter
+			}
 			slog.WarnContext(ctx, "responses request sleep before retry", "sleep", sleep, "attempts", attempts)
 			time.Sleep(sleep)
 		}
+		retryAfter = 0
 
 		// Create HTTP request
 		httpReq, err := http.NewRequestWithContext(ctx, "POST", fullURL, bytes.NewReader(reqJSON))
@@ -477,12 +482,14 @@ func (s *ResponsesService) Do(ctx context.Context, ir *llm.Request) (*llm.Respon
 				switch {
 				case httpResp.StatusCode >= 500:
 					// Server error, retry
+					retryAfter = llm.ParseRetryAfter(httpResp.Header.Get("Retry-After"))
 					slog.WarnContext(ctx, "responses_request_failed", "error", apiErr.Message, "status_code", httpResp.StatusCode, "url", fullURL, "model", model.ModelName)
 					errs = errors.Join(errs, fmt.Errorf("status %d (url=%s, model=%s): %s", httpResp.StatusCode, fullURL, model.ModelName, apiErr.Message))
 					continue
 
 				case httpResp.StatusCode == 429:
 					// Rate limited, retry
+					retryAfter = llm.ParseRetryAfter(httpResp.Header.Get("Retry-After"))
 					slog.WarnContext(ctx, "responses_request_rate_limited", "error", apiErr.Message, "url", fullURL, "model", model.ModelName)
 					errs = errors.Join(errs, fmt.Errorf("status %d (rate limited, url=%s, model=%s): %s", httpResp.StatusCode, fullURL, model.ModelName, apiErr.Message))
 					continue

@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"math/rand"
@@ -576,18 +577,20 @@ func (s *Service) Do(ctx context.Context, ir *llm.Request) (*llm.Response, error
 			return nil, fmt.Errorf("gemini: API error after %d attempts: %w", attempts, gemAPIErr)
 		}
 
-		// Check if the error is retryable (e.g., server error or rate limiting)
-		if strings.Contains(gemAPIErr.Error(), "429") || strings.Contains(gemAPIErr.Error(), "5") {
-			// Rate limited or server error - wait and retry
-			random := time.Duration(rand.Int63n(int64(time.Second)))
-			sleep := backoff[attempts] + random
-			slog.WarnContext(ctx, "gemini_request_retry", "error", gemAPIErr.Error(), "attempt", attempts+1, "sleep", sleep)
-			time.Sleep(sleep)
-			continue
+		// Check if the error is retryable (server error or rate limiting).
+		var apiErr *gemini.APIError
+		retryable := errors.As(gemAPIErr, &apiErr) && (apiErr.StatusCode == 429 || apiErr.StatusCode >= 500)
+		if !retryable {
+			return nil, fmt.Errorf("gemini: API error: %w", gemAPIErr)
 		}
-
-		// Non-retryable error
-		return nil, fmt.Errorf("gemini: API error: %w", gemAPIErr)
+		random := time.Duration(rand.Int63n(int64(time.Second)))
+		sleep := backoff[attempts] + random
+		if retryAfter := llm.ParseRetryAfter(apiErr.Header.Get("Retry-After")); retryAfter > sleep {
+			sleep = retryAfter
+		}
+		slog.WarnContext(ctx, "gemini_request_retry", "error", gemAPIErr.Error(), "status_code", apiErr.StatusCode, "attempt", attempts+1, "sleep", sleep)
+		time.Sleep(sleep)
+		continue
 	}
 
 	content := convertGeminiResponseToContent(gemRes)

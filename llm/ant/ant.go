@@ -135,8 +135,8 @@ type content struct {
 
 	// for thinking
 	Thinking  *string `json:"thinking,omitempty"`
-	Data      string `json:"data,omitempty"`      // for redacted_thinking or image
-	Signature string `json:"signature,omitempty"` // for thinking
+	Data      string  `json:"data,omitempty"`      // for redacted_thinking or image
+	Signature string  `json:"signature,omitempty"` // for thinking
 
 	// for tool_use
 	ToolName  string          `json:"name,omitempty"`
@@ -526,16 +526,21 @@ func (s *Service) Do(ctx context.Context, ir *llm.Request) (*llm.Response, error
 	httpc := cmp.Or(s.HTTPC, http.DefaultClient)
 
 	// retry loop
-	var errs error // accumulated errors across all attempts
+	var errs error               // accumulated errors across all attempts
+	var retryAfter time.Duration // honored from a Retry-After header, if present
 	for attempts := 0; ; attempts++ {
 		if attempts > 10 {
 			return nil, fmt.Errorf("anthropic request failed after %d attempts: %w", attempts, errs)
 		}
 		if attempts > 0 {
 			sleep := backoff[min(attempts, len(backoff)-1)] + time.Duration(rand.Int64N(int64(time.Second)))
+			if retryAfter > sleep {
+				sleep = retryAfter
+			}
 			slog.WarnContext(ctx, "anthropic request sleep before retry", "sleep", sleep, "attempts", attempts)
 			time.Sleep(sleep)
 		}
+		retryAfter = 0
 		req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(payload))
 		if err != nil {
 			return nil, errors.Join(errs, err)
@@ -579,11 +584,13 @@ func (s *Service) Do(ctx context.Context, ir *llm.Request) (*llm.Response, error
 			return result, nil
 		case resp.StatusCode >= 500 && resp.StatusCode < 600:
 			// server error, retry
+			retryAfter = llm.ParseRetryAfter(resp.Header.Get("Retry-After"))
 			slog.WarnContext(ctx, "anthropic_request_failed", "response", string(buf), "status_code", resp.StatusCode, "url", url, "model", s.Model)
 			errs = errors.Join(errs, fmt.Errorf("status %v (url=%s, model=%s): %s", resp.Status, url, cmp.Or(s.Model, DefaultModel), buf))
 			continue
 		case resp.StatusCode == 429:
 			// rate limited, retry
+			retryAfter = llm.ParseRetryAfter(resp.Header.Get("Retry-After"))
 			slog.WarnContext(ctx, "anthropic_request_rate_limited", "response", string(buf), "url", url, "model", s.Model)
 			errs = errors.Join(errs, fmt.Errorf("status %v (url=%s, model=%s): %s", resp.Status, url, cmp.Or(s.Model, DefaultModel), buf))
 			continue
