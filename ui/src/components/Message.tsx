@@ -562,8 +562,8 @@ function Message({ message, onOpenDiffViewer, onCommentTextChange, onFork, onEdi
         // 2. TOOL_COMPONENTS map in ChatInterface.tsx
         // See AGENTS.md in this directory.
 
-        // Use specialized component for bash tool
-        if (content.ToolName === "bash") {
+        // Use specialized component for bash/shell tools (both take a command)
+        if (content.ToolName === "bash" || content.ToolName === "shell") {
           return <BashTool toolInput={content.ToolInput} isRunning={true} />;
         }
         // Use specialized component for patch tool
@@ -679,8 +679,8 @@ function Message({ message, onOpenDiffViewer, onCommentTextChange, onFork, onEdi
           "Unknown Tool";
         const toolInput = toolInfo && typeof toolInfo === "object" ? toolInfo.input : undefined;
 
-        // Use specialized component for bash tool
-        if (toolName === "bash") {
+        // Use specialized component for bash/shell tools (both take a command)
+        if (toolName === "bash" || toolName === "shell") {
           return (
             <BashTool
               toolInput={toolInput}

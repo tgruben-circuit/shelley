@@ -140,6 +140,13 @@ func NewToolSet(ctx context.Context, cfg ToolSetConfig) *ToolSet {
 		ConversationID:   cfg.ConversationID,
 	}
 
+	shellTool := &ShellTool{
+		WorkingDir:       wd,
+		LLMProvider:      cfg.LLMProvider,
+		EnableJITInstall: cfg.EnableJITInstall,
+		ConversationID:   cfg.ConversationID,
+	}
+
 	// Use simplified patch schema for weaker models, full schema for sonnet/opus
 	simplified := !isStrongModel(cfg.ModelID)
 	patchTool := &PatchTool{
@@ -171,6 +178,7 @@ func NewToolSet(ctx context.Context, cfg ToolSetConfig) *ToolSet {
 
 	tools := []*llm.Tool{
 		bashTool.Tool(),
+		shellTool.Tool(),
 		patchTool.Tool(),
 		kwTool,
 		changeDirTool.Tool(),
