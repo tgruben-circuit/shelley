@@ -313,6 +313,18 @@ class ApiService {
     return response.json();
   }
 
+  async updateConversationTags(conversationId: string, tags: string[]): Promise<Conversation> {
+    const response = await fetch(`${this.baseUrl}/conversation/${conversationId}/tags`, {
+      method: "POST",
+      headers: this.postHeaders,
+      body: JSON.stringify({ tags }),
+    });
+    if (!response.ok) {
+      throw new Error(`Failed to update conversation tags: ${response.statusText}`);
+    }
+    return response.json();
+  }
+
   async getPR(conversationId: string): Promise<PRResponse> {
     const response = await fetch(`${this.baseUrl}/conversation/${conversationId}/pr`);
     if (!response.ok) {

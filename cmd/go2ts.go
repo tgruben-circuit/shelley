@@ -120,6 +120,7 @@ type conversationWithStateForTS struct {
 	Archived             bool    `json:"archived"`
 	ParentConversationID *string            `json:"parent_conversation_id"`
 	Model                *string            `json:"model"`
+	Tags                 string             `json:"tags"`
 	Working              bool               `json:"working"`
 	PR                   *github.PRSummary  `json:"pr,omitempty"`
 }

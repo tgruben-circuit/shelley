@@ -130,3 +130,9 @@ WHERE c.archived = FALSE
     LIMIT 1)
 ORDER BY c.updated_at DESC
 LIMIT ? OFFSET ?;
+
+-- name: UpdateConversationTags :one
+UPDATE conversations
+SET tags = ?, updated_at = CURRENT_TIMESTAMP
+WHERE conversation_id = ?
+RETURNING *;

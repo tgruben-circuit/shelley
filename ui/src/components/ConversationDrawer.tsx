@@ -48,6 +48,9 @@ function ConversationDrawer({
   const [loadingArchived, setLoadingArchived] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingSlug, setEditingSlug] = useState("");
+  const [tagEditingId, setTagEditingId] = useState<string | null>(null);
+  const [tagInput, setTagInput] = useState("");
+  const tagInputRef = React.useRef<HTMLInputElement>(null);
   const [subagents, setSubagents] = useState<Record<string, ConversationWithState[]>>({});
   const [expandedSubagents, setExpandedSubagents] = useState<Set<string>>(new Set());
   const renameInputRef = React.useRef<HTMLInputElement>(null);
@@ -283,6 +286,61 @@ function ConversationDrawer({
     }
   };
 
+  // Tags are stored on the conversation as a JSON array string.
+  const parseTags = (conversation: Conversation): string[] => {
+    try {
+      const parsed = JSON.parse((conversation as Conversation).tags || "[]");
+      return Array.isArray(parsed) ? parsed.filter((t): t is string => typeof t === "string") : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const handleStartTagEdit = (e: React.MouseEvent, conversation: Conversation) => {
+    e.stopPropagation();
+    setTagEditingId(conversation.conversation_id);
+    setTagInput("");
+    setTimeout(() => tagInputRef.current?.focus(), 0);
+  };
+
+  const saveTags = async (conversation: Conversation, tags: string[]) => {
+    try {
+      const updated = await api.updateConversationTags(conversation.conversation_id, tags);
+      onConversationRenamed?.(updated);
+    } catch (err) {
+      console.error("Failed to update conversation tags:", err);
+    }
+  };
+
+  const handleAddTag = async (conversation: Conversation) => {
+    const tag = tagInput.trim();
+    if (!tag) return;
+    const existing = parseTags(conversation);
+    if (!existing.includes(tag)) {
+      await saveTags(conversation, [...existing, tag]);
+    }
+    setTagInput("");
+  };
+
+  const handleRemoveTag = async (e: React.MouseEvent, conversation: Conversation, tag: string) => {
+    e.stopPropagation();
+    await saveTags(
+      conversation,
+      parseTags(conversation).filter((t) => t !== tag),
+    );
+  };
+
+  const handleTagKeyDown = (e: React.KeyboardEvent, conversation: Conversation) => {
+    if (e.nativeEvent.isComposing) return;
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleAddTag(conversation);
+    } else if (e.key === "Escape") {
+      setTagEditingId(null);
+      setTagInput("");
+    }
+  };
+
   const handleRenameKeyDown = (e: React.KeyboardEvent, conversationId: string) => {
     // Don't submit while IME is composing (e.g., converting Japanese hiragana to kanji)
     if (e.nativeEvent.isComposing) {
@@ -437,6 +495,42 @@ function ConversationDrawer({
                             />
                           )}
                         </div>
+                        {(parseTags(conversation).length > 0 ||
+                          tagEditingId === conversation.conversation_id) && (
+                          <div className="conversation-tags">
+                            {parseTags(conversation).map((tag) => (
+                              <span key={tag} className="conversation-tag">
+                                {tag}
+                                {!showArchived && (
+                                  <button
+                                    className="conversation-tag-remove"
+                                    onClick={(e) => handleRemoveTag(e, conversation, tag)}
+                                    title={`Remove tag "${tag}"`}
+                                    aria-label={`Remove tag ${tag}`}
+                                  >
+                                    ×
+                                  </button>
+                                )}
+                              </span>
+                            ))}
+                            {tagEditingId === conversation.conversation_id && (
+                              <input
+                                ref={tagInputRef}
+                                type="text"
+                                value={tagInput}
+                                placeholder="add tag…"
+                                className="conversation-tag-input"
+                                onChange={(e) => setTagInput(e.target.value)}
+                                onKeyDown={(e) => handleTagKeyDown(e, conversation)}
+                                onBlur={() => {
+                                  setTagEditingId(null);
+                                  setTagInput("");
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                            )}
+                          </div>
+                        )}
                         <div className="conversation-meta">
                           <span className="conversation-date">
                             {formatDate(conversation.updated_at)}
@@ -474,6 +568,26 @@ function ConversationDrawer({
                                     strokeLinejoin="round"
                                     strokeWidth={2}
                                     d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                  />
+                                </svg>
+                              </button>
+                              <button
+                                onClick={(e) => handleStartTagEdit(e, conversation)}
+                                className="btn-icon-sm"
+                                title="Tags"
+                                aria-label="Edit conversation tags"
+                              >
+                                <svg
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                  style={{ width: "1rem", height: "1rem" }}
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M7 7h.01M7 3h5a1.99 1.99 0 011.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.99 1.99 0 013 12V7a4 4 0 014-4z"
                                   />
                                 </svg>
                               </button>

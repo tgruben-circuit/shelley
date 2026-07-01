@@ -371,6 +371,28 @@ func (db *DB) UpdateConversationSlug(ctx context.Context, conversationID, slug s
 	return &conversation, err
 }
 
+// UpdateConversationTags replaces a conversation's tags. Tags are stored as a
+// JSON array of strings.
+func (db *DB) UpdateConversationTags(ctx context.Context, conversationID string, tags []string) (*generated.Conversation, error) {
+	if tags == nil {
+		tags = []string{}
+	}
+	encoded, err := json.Marshal(tags)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode tags: %w", err)
+	}
+	var conversation generated.Conversation
+	err = db.pool.Tx(ctx, func(ctx context.Context, tx *Tx) error {
+		q := generated.New(tx.Conn())
+		conversation, err = q.UpdateConversationTags(ctx, generated.UpdateConversationTagsParams{
+			Tags:           string(encoded),
+			ConversationID: conversationID,
+		})
+		return err
+	})
+	return &conversation, err
+}
+
 // UpdateConversationCwd updates the working directory for a conversation
 func (db *DB) UpdateConversationCwd(ctx context.Context, conversationID, cwd string) error {
 	return db.pool.Tx(ctx, func(ctx context.Context, tx *Tx) error {

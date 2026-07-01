@@ -166,6 +166,41 @@ func TestConversationService_UpdateSlug(t *testing.T) {
 	}
 }
 
+func TestConversationService_UpdateTags(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	created, err := db.CreateConversation(ctx, nil, true, nil, nil)
+	if err != nil {
+		t.Fatalf("Failed to create test conversation: %v", err)
+	}
+
+	// New conversations default to an empty tags array.
+	if created.Tags != "[]" {
+		t.Errorf("Expected default tags [], got %q", created.Tags)
+	}
+
+	updated, err := db.UpdateConversationTags(ctx, created.ConversationID, []string{"alpha", "beta"})
+	if err != nil {
+		t.Fatalf("UpdateConversationTags() error = %v", err)
+	}
+	if updated.Tags != `["alpha","beta"]` {
+		t.Errorf("Expected tags [\"alpha\",\"beta\"], got %q", updated.Tags)
+	}
+
+	// Clearing tags stores an empty array, not null.
+	cleared, err := db.UpdateConversationTags(ctx, created.ConversationID, nil)
+	if err != nil {
+		t.Fatalf("UpdateConversationTags(nil) error = %v", err)
+	}
+	if cleared.Tags != "[]" {
+		t.Errorf("Expected cleared tags [], got %q", cleared.Tags)
+	}
+}
+
 func TestConversationService_List(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()

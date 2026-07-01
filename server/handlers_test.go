@@ -419,3 +419,30 @@ func TestHandleWriteFile(t *testing.T) {
 		t.Errorf("Expected status code %d, got %d", http.StatusBadRequest, w.Code)
 	}
 }
+
+func TestNormalizeTags(t *testing.T) {
+	tests := []struct {
+		name string
+		in   []string
+		want []string
+	}{
+		{"nil", nil, []string{}},
+		{"empty", []string{}, []string{}},
+		{"trim and drop empty", []string{" a ", "", "  "}, []string{"a"}},
+		{"dedupe preserving order", []string{"b", "a", "b", "c", "a"}, []string{"b", "a", "c"}},
+		{"case-sensitive", []string{"Go", "go"}, []string{"Go", "go"}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := normalizeTags(tc.in)
+			if len(got) != len(tc.want) {
+				t.Fatalf("normalizeTags(%v) = %v, want %v", tc.in, got, tc.want)
+			}
+			for i := range got {
+				if got[i] != tc.want[i] {
+					t.Fatalf("normalizeTags(%v) = %v, want %v", tc.in, got, tc.want)
+				}
+			}
+		})
+	}
+}

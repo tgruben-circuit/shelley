@@ -553,6 +553,9 @@ func (s *Server) conversationMux() *http.ServeMux {
 	mux.HandleFunc("POST /{id}/rename", func(w http.ResponseWriter, r *http.Request) {
 		s.handleRenameConversation(w, r, r.PathValue("id"))
 	})
+	mux.HandleFunc("POST /{id}/tags", func(w http.ResponseWriter, r *http.Request) {
+		s.handleUpdateConversationTags(w, r, r.PathValue("id"))
+	})
 	mux.HandleFunc("GET /{id}/subagents", func(w http.ResponseWriter, r *http.Request) {
 		s.handleGetSubagents(w, r, r.PathValue("id"))
 	})
@@ -1680,6 +1683,60 @@ func (s *Server) handleRenameConversation(w http.ResponseWriter, r *http.Request
 	}
 
 	// Notify conversation list subscribers
+	go s.publishConversationListUpdate(ConversationListUpdate{
+		Type:         "update",
+		Conversation: conversation,
+	})
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(conversation) //nolint:errchkjson // best-effort HTTP response
+}
+
+// TagsRequest represents a request to update a conversation's tags.
+type TagsRequest struct {
+	Tags []string `json:"tags"`
+}
+
+// normalizeTags trims whitespace and removes empty/duplicate entries while
+// preserving first-seen order. Comparison is case-sensitive.
+func normalizeTags(in []string) []string {
+	seen := make(map[string]struct{}, len(in))
+	out := make([]string, 0, len(in))
+	for _, t := range in {
+		t = strings.TrimSpace(t)
+		if t == "" {
+			continue
+		}
+		if _, ok := seen[t]; ok {
+			continue
+		}
+		seen[t] = struct{}{}
+		out = append(out, t)
+	}
+	return out
+}
+
+// handleUpdateConversationTags handles POST /conversation/<id>/tags
+func (s *Server) handleUpdateConversationTags(w http.ResponseWriter, r *http.Request, conversationID string) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req TagsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	tags := normalizeTags(req.Tags)
+	conversation, err := s.db.UpdateConversationTags(r.Context(), conversationID, tags)
+	if err != nil {
+		s.logger.Error("Failed to update conversation tags", "conversationID", conversationID, "error", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
 	go s.publishConversationListUpdate(ConversationListUpdate{
 		Type:         "update",
 		Conversation: conversation,
