@@ -115,6 +115,29 @@ Get notified when the agent finishes work or hits an error. Supports:
 
 Channels are configurable via the API or the Notifications modal in the UI, and they persist in the database. A test endpoint verifies connectivity before you commit a configuration.
 
+### User Hooks
+
+Customize Percy's behavior by dropping executable scripts into `$HOME/.config/percy/hooks/<name>`. Four lifecycle hooks are supported:
+
+- **`system-prompt`** — rewrite the rendered system prompt (fires for top-level and subagent conversations)
+- **`new-conversation`** — rewrite the prompt, model, or working directory, or supply a slug, before a new conversation is created
+- **`chat-message`** — rewrite a follow-up message to an existing conversation
+- **`end-of-turn`** — fire-and-forget notification when the agent finishes a turn
+
+Hooks are opt-in (they only run if the executable exists), bounded to 30 seconds, and receive sanitized input on stdin (sensitive request headers like `Authorization` and `Cookie` are stripped). A failing hook aborts its operation — except `end-of-turn`, whose failures are only logged. See [HOOKS.md](HOOKS.md) for the full stdin/stdout contracts and examples.
+
+### Shell Tool
+
+A companion to the bash tool for long-running commands. Instead of hard-killing a command on timeout, the `shell` tool *yields* after `yield_time_seconds`, returning the output so far, the PID/PGID, and a log-file path so the agent can poll, wait, or kill the still-running process. This lets the agent supervise builds, test suites, and big transfers without committing the whole tool call to a hard timeout. For truly long-lived processes (servers, watchers) it still recommends tmux.
+
+### Conversation Tags
+
+Conversations can be tagged for organization. Tags are stored as a JSON array on the conversation and rendered as chips in the drawer, with an inline add/remove editor next to the rename and archive actions. Tag input is normalized on the server (trimmed, de-duplicated, order-preserving).
+
+### Resilient LLM Retries
+
+All four provider backends (Anthropic, OpenAI, Gemini, and the OpenAI Responses API) honor the `Retry-After` header on `429` and `5xx` responses, backing off for at least the server-requested delay instead of a fixed schedule. The Gemini client surfaces a structured API error carrying the status code and headers so retries are status-driven rather than string-matched.
+
 ## Installation
 
 ### Pre-Built Binaries (macOS/Linux)
